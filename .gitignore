@@ -1,0 +1,23 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+.clang_complete
+.gcc-flags.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Binary dumps and temp files
+nvs_dump.bin
+*.bin
+*.elf
+*.o
+*.a
+
+# OS generated files
+.DS_Store
+Thumbs.db
