@@ -16,6 +16,7 @@
 #include "IssView.h"
 #include "SpaceXView.h"
 #include "LedBeacon.h"
+#include "CitySelectView.h"
 
 static AppMode currentMode = MODE_RADAR;
 
@@ -31,15 +32,21 @@ static unsigned long lastExtrapolateTick  = 0;
 static char timeString[24] = "12:00:00 AM";
 
 static float getActiveLat() {
-  return GpsManager::hasFix() ? GpsManager::getLat() : ConfigPortal::getLat();
+  if (CitySelectView::isUsingGps() && GpsManager::hasFix()) {
+    return GpsManager::getLat();
+  }
+  return ConfigPortal::getLat();
 }
 
 static float getActiveLon() {
-  return GpsManager::hasFix() ? GpsManager::getLon() : ConfigPortal::getLon();
+  if (CitySelectView::isUsingGps() && GpsManager::hasFix()) {
+    return GpsManager::getLon();
+  }
+  return ConfigPortal::getLon();
 }
 
 static const char *getActiveCityName() {
-  if (GpsManager::hasFix()) {
+  if (CitySelectView::isUsingGps() && GpsManager::hasFix()) {
     static char gpsCityBuf[24];
     snprintf(gpsCityBuf, sizeof(gpsCityBuf), "GPS: %s", ConfigPortal::getCityName());
     return gpsCityBuf;
@@ -73,6 +80,9 @@ static void redrawCurrentView() {
       break;
     case MODE_SPACEX:
       SpaceXView::draw();
+      break;
+    case MODE_CITY:
+      CitySelectView::draw();
       break;
     default:
       break;
@@ -201,7 +211,7 @@ void loop() {
   GpsManager::update();
 
   // If GPS acquired a 3D fix and moved significantly, update telemetry
-  if (GpsManager::hasMovedSignificantly(3.0f)) {
+  if (CitySelectView::isUsingGps() && GpsManager::hasMovedSignificantly(3.0f)) {
     Serial.printf("[GPS] Position update: %.4f, %.4f. Refreshing telemetry...\n",
                   GpsManager::getLat(), GpsManager::getLon());
     fetchCityData();
@@ -236,15 +246,12 @@ void loop() {
       int tabW = SCREEN_W / 6;
       int tabIdx = tx / tabW;
 
-      if (tabIdx >= 0 && tabIdx < 5) {
+      if (tabIdx >= 0 && tabIdx < 6) {
         if (currentMode != (AppMode)tabIdx) {
           currentMode = (AppMode)tabIdx;
           FlightListView::clearDetail();
           redrawCurrentView();
         }
-      } else if (tabIdx == 5) {
-        ConfigPortal::nextCityPreset();
-        fetchCityData();
       }
     }
     // Content Area Touches
@@ -253,6 +260,10 @@ void loop() {
         FlightListView::handleTouch(tx, ty);
       } else if (currentMode == MODE_RADAR) {
         FlightRadarView::handleTouch(tx, ty);
+      } else if (currentMode == MODE_CITY) {
+        if (CitySelectView::handleTouch(tx, ty)) {
+          fetchCityData();
+        }
       }
     }
   }

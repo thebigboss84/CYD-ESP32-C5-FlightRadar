@@ -86,6 +86,7 @@ enum AppMode {
   MODE_WEATHER,
   MODE_ISS,
   MODE_SPACEX,
+  MODE_CITY,
   MODE_COUNT
 };
 
@@ -191,18 +192,19 @@ struct CityPreset {
   float lat;
   float lon;
   const char *tz;
+  const char *subtitle;
 };
 
 // Predefined major aerospace & global cities with POSIX timezones
 static const CityPreset CITY_PRESETS[] = {
-  { "New York",      40.7128f,  -74.0060f, "EST5EDT,M3.2.0,M11.1.0" },
-  { "London",        51.5074f,   -0.1278f, "GMT0BST,M3.5.0/1,M10.5.0" },
-  { "Paris",         48.8566f,    2.3522f, "CET-1CEST,M3.5.0,M10.5.0/3" },
-  { "Tokyo",         35.6762f,  139.6503f, "JST-9" },
-  { "Dubai",         25.2048f,   55.2708f, "GST-4" },
-  { "San Francisco", 37.7749f, -122.4194f, "PST8PDT,M3.2.0,M11.1.0" },
-  { "Cape Canaveral",28.3922f,  -80.6077f, "EST5EDT,M3.2.0,M11.1.0" },
-  { "Sydney",       -33.8688f,  151.2093f, "AEST-10AEDT,M10.1.0,M4.1.0/3" }
+  { "Los Angeles",   34.0522f, -118.2437f, "PST8PDT,M3.2.0,M11.1.0", "USA / SoCal" },
+  { "Cape Canaveral",28.3922f,  -80.6077f, "EST5EDT,M3.2.0,M11.1.0", "SpaceX Hub" },
+  { "San Francisco", 37.7749f, -122.4194f, "PST8PDT,M3.2.0,M11.1.0", "USA / NorCal" },
+  { "New York",      40.7128f,  -74.0060f, "EST5EDT,M3.2.0,M11.1.0", "JFK / LGA" },
+  { "London",        51.5074f,   -0.1278f, "GMT0BST,M3.5.0/1,M10.5.0", "UK / Heathrow" },
+  { "Paris",         48.8566f,    2.3522f, "CET-1CEST,M3.5.0,M10.5.0/3", "France / CDG" },
+  { "Tokyo",         35.6762f,  139.6503f, "JST-9",                   "Japan / Haneda" },
+  { "Dubai",         25.2048f,   55.2708f, "GST-4",                   "UAE / Emirates" }
 };
 
 #define CITY_PRESETS_COUNT (sizeof(CITY_PRESETS) / sizeof(CITY_PRESETS[0]))

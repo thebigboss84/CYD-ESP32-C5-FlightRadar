@@ -209,6 +209,7 @@ float ConfigPortal::getLon()                  { return lon; }
 float ConfigPortal::getRadius()               { return radiusKm; }
 bool  ConfigPortal::hasValidSettings()        { return configured; }
 bool  ConfigPortal::isCustomCity()            { return usingCustom; }
+int   ConfigPortal::getCityPresetIndex()      { return currentCityIdx; }
 
 const char *ConfigPortal::getTimeZone() {
   if (usingCustom || currentCityIdx < 0 || currentCityIdx >= (int)CITY_PRESETS_COUNT) {

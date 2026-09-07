@@ -97,6 +97,26 @@ Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
 
 ---
 
+
+### 9. Interactive City & GPS Airspace Selector
+* **Dedicated `CITY` View**: Tap the **`CITY`** tab in the bottom footer navigation to enter the interactive airspace selector.
+* **Live GPS Diagnostics**: Displays real-time satellite telemetry from the connected GY-GPS6MV2 module (3D Fix state, active satellite count, HDOP precision, and live latitude/longitude).
+* **Instant Airspace Switching (10 Touch Cards)**:
+  * **`[GPS] Live Fix`**: Dynamically locks to your live GPS coordinates as you move.
+  * **`[HOME] Rancho Cucamonga`**: Restores your configured custom home coordinates from NVS storage.
+  * **Major Global & Aerospace Hubs**:
+    * **Los Angeles, CA** (34.05°N, 118.24°W)
+    * **San Francisco, CA** (37.77°N, 122.42°W)
+    * **Cape Canaveral, FL** (28.39°N, 80.61°W - SpaceX / NASA)
+    * **New York, NY** (40.71°N, 74.01°W - JFK / LGA)
+    * **London, UK** (51.51°N, 0.13°W - Heathrow)
+    * **Paris, France** (48.86°N, 2.35°E - CDG)
+    * **Tokyo, Japan** (35.68°N, 139.65°E - Haneda)
+    * **Dubai, UAE** (25.20°N, 55.27°E - Emirates)
+* **Active Indicator & Live Refresh**: Highlights the currently active airspace with a cyan glow and `[ACTIVE]` tag. Tapping any card immediately switches location, adjusts the local timezone, and re-queries live OpenSky flights, Open-Meteo weather, ISS pass elevation, and SpaceX line-of-sight!
+
+---
+
 ## Installation & Build
 
 ### Prerequisites

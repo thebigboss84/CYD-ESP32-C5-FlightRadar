@@ -84,14 +84,14 @@ void LedBeacon::update() {
     return;
   }
 
-  // 4. SpaceX Countdown (Pulsing warm amber glow, 2-second cycle)
+  // 4. SpaceX Countdown (Pulsing high-visibility amber glow, 2-second cycle)
   if (spaceXCountdown) {
     if (now - lastTick >= 30) {
       lastTick = now;
       float phase = (float)(now % 2000) / 2000.0f * (float)M_PI * 2.0f;
-      float bright = (sinf(phase) + 1.0f) * 0.5f; // 0.0 .. 1.0
-      uint8_t r = (uint8_t)(bright * 220.0f);
-      uint8_t g = (uint8_t)(bright * 90.0f);
+      float bright = 0.25f + 0.75f * ((sinf(phase) + 1.0f) * 0.5f); // 0.25 .. 1.0
+      uint8_t r = (uint8_t)(bright * 255.0f);
+      uint8_t g = (uint8_t)(bright * 140.0f);
       writeColor(r, g, 0);
     }
     return;
@@ -102,21 +102,21 @@ void LedBeacon::update() {
     if (now - lastTick >= 30) {
       lastTick = now;
       float phase = (float)(now % 2500) / 2500.0f * (float)M_PI * 2.0f;
-      float bright = (sinf(phase) + 1.0f) * 0.5f; // 0.0 .. 1.0
-      uint8_t r = (uint8_t)(bright * 160.0f);
-      uint8_t b = (uint8_t)(bright * 240.0f);
+      float bright = 0.25f + 0.75f * ((sinf(phase) + 1.0f) * 0.5f); // 0.25 .. 1.0
+      uint8_t r = (uint8_t)(bright * 220.0f);
+      uint8_t b = (uint8_t)(bright * 255.0f);
       writeColor(r, 0, b);
     }
     return;
   }
 
-  // 6. Normal Idle: Soft subtle cyan/green radar pulse or off
-  if (now - lastTick >= 50) {
+  // 6. Normal Idle: Luminous tactical cyan radar glow (15x brighter, vibrant breath)
+  if (now - lastTick >= 40) {
     lastTick = now;
     float phase = (float)(now % 3000) / 3000.0f * (float)M_PI * 2.0f;
-    float bright = (sinf(phase) + 1.0f) * 0.5f; // 0.0 .. 1.0
-    uint8_t g = (uint8_t)(bright * 12.0f);      // very dim 12/255
-    uint8_t b = (uint8_t)(bright * 18.0f);
+    float bright = 0.20f + 0.80f * ((sinf(phase) + 1.0f) * 0.5f); // 0.20 .. 1.0
+    uint8_t g = (uint8_t)(bright * 180.0f);
+    uint8_t b = (uint8_t)(bright * 255.0f);
     writeColor(0, g, b);
   }
 }

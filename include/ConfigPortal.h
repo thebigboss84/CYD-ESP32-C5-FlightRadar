@@ -20,6 +20,7 @@ public:
   static float getRadius();
   static bool  hasValidSettings();
   static bool  isCustomCity();
+  static int   getCityPresetIndex();
   static const char *getTimeZone();
 
   static void runPortal();
