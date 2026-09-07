@@ -87,12 +87,15 @@ void OpenSkyClient::fetchRoute(int index) {
 
   if (strlen(f.callsign) < 3) return;
 
-  char url[96];
-  snprintf(url, sizeof(url), "http://api.adsbdb.com/v0/callsign/%s", f.callsign);
+  char url[128];
+  snprintf(url, sizeof(url), "https://api.adsbdb.com/v0/callsign/%s", f.callsign);
+
+  WiFiClientSecure client;
+  client.setInsecure();
 
   HTTPClient http;
-  http.begin(url);
-  http.setTimeout(2000);
+  http.begin(client, url);
+  http.setTimeout(3500);
 
   int code = http.GET();
   if (code == HTTP_CODE_OK) {
@@ -102,16 +105,34 @@ void OpenSkyClient::fetchRoute(int index) {
     if (!err) {
       JsonObject route = doc["response"]["flightroute"];
       if (!route.isNull()) {
-        const char *orig = route["origin"]["iata_code"] | route["origin"]["icao_code"] | "";
-        const char *dest = route["destination"]["iata_code"] | route["destination"]["icao_code"] | "";
+        const char *origCode = route["origin"]["iata_code"] | route["origin"]["icao_code"] | "";
+        const char *origCity = route["origin"]["municipality"] | "";
+        const char *origName = route["origin"]["name"] | "";
+
+        const char *destCode = route["destination"]["iata_code"] | route["destination"]["icao_code"] | "";
+        const char *destCity = route["destination"]["municipality"] | "";
+        const char *destName = route["destination"]["name"] | "";
+
         const char *airl = route["airline"]["name"] | "";
         const char *ac   = doc["response"]["aircraft"]["type"] | "";
 
-        strncpy(f.origin, orig, sizeof(f.origin) - 1);
-        f.origin[sizeof(f.origin) - 1] = '\0';
+        strncpy(f.origin_code, origCode, sizeof(f.origin_code) - 1);
+        f.origin_code[sizeof(f.origin_code) - 1] = '\0';
 
-        strncpy(f.dest, dest, sizeof(f.dest) - 1);
-        f.dest[sizeof(f.dest) - 1] = '\0';
+        strncpy(f.origin_city, origCity, sizeof(f.origin_city) - 1);
+        f.origin_city[sizeof(f.origin_city) - 1] = '\0';
+
+        strncpy(f.origin_name, origName, sizeof(f.origin_name) - 1);
+        f.origin_name[sizeof(f.origin_name) - 1] = '\0';
+
+        strncpy(f.dest_code, destCode, sizeof(f.dest_code) - 1);
+        f.dest_code[sizeof(f.dest_code) - 1] = '\0';
+
+        strncpy(f.dest_city, destCity, sizeof(f.dest_city) - 1);
+        f.dest_city[sizeof(f.dest_city) - 1] = '\0';
+
+        strncpy(f.dest_name, destName, sizeof(f.dest_name) - 1);
+        f.dest_name[sizeof(f.dest_name) - 1] = '\0';
 
         strncpy(f.airline, airl, sizeof(f.airline) - 1);
         f.airline[sizeof(f.airline) - 1] = '\0';
@@ -119,11 +140,39 @@ void OpenSkyClient::fetchRoute(int index) {
         strncpy(f.aircraft, ac, sizeof(f.aircraft) - 1);
         f.aircraft[sizeof(f.aircraft) - 1] = '\0';
 
-        Serial.printf("[ADSBdb] Route for %s: %s -> %s (%s)\n", f.callsign, f.origin, f.dest, f.airline);
+        Serial.printf("[ADSBdb] %s: %s (%s) -> %s (%s)\n",
+                      f.callsign, f.origin_city, f.origin_code, f.dest_city, f.dest_code);
       }
     }
   }
   http.end();
+}
+
+void OpenSkyClient::extrapolatePositions(float dtSeconds, float userLat, float userLon) {
+  if (flightCount == 0 || dtSeconds <= 0.0f) return;
+
+  for (int i = 0; i < flightCount; i++) {
+    FlightRecord &r = flights[i];
+    if (r.on_ground || r.vel_ms <= 1.0f) continue;
+
+    float distMeters = r.vel_ms * dtSeconds;
+    float trkRad = r.track * (float)M_PI / 180.0f;
+
+    // Delta latitude (1 deg lat ~ 111,139m)
+    float dLat = (distMeters * cosf(trkRad)) / 111139.0f;
+
+    // Delta longitude (1 deg lon ~ 111,139m * cos(lat))
+    float latRad = r.lat * (float)M_PI / 180.0f;
+    float cosLat = cosf(latRad);
+    if (fabsf(cosLat) < 0.01f) cosLat = 0.01f;
+    float dLon = (distMeters * sinf(trkRad)) / (111139.0f * cosLat);
+
+    r.lat += dLat;
+    r.lon += dLon;
+
+    r.dist_km = calcHaversine(userLat, userLon, r.lat, r.lon);
+    r.bearing = calcBearing(userLat, userLon, r.lat, r.lon);
+  }
 }
 
 bool OpenSkyClient::fetch(float userLat, float userLon, float radiusKm) {
@@ -204,11 +253,15 @@ bool OpenSkyClient::fetch(float userLat, float userLon, float radiusKm) {
     r.dist_km   = dist;
     r.bearing   = calcBearing(userLat, userLon, lat, lon);
 
-    r.origin[0] = '\0';
-    r.dest[0]   = '\0';
-    r.aircraft[0] = '\0';
-    r.airline[0]  = '\0';
-    r.route_fetched = false;
+    r.origin_code[0] = '\0';
+    r.origin_city[0] = '\0';
+    r.dest_code[0]   = '\0';
+    r.dest_city[0]   = '\0';
+    r.origin_name[0] = '\0';
+    r.dest_name[0]   = '\0';
+    r.aircraft[0]    = '\0';
+    r.airline[0]     = '\0';
+    r.route_fetched  = false;
 
     insertSorted(r);
   }

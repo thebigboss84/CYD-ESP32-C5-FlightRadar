@@ -32,7 +32,7 @@ const WeatherRecord &WeatherClient::getData() {
 }
 
 bool WeatherClient::fetch(float lat, float lon) {
-  char url[256];
+  char url[512];
   snprintf(url, sizeof(url),
     "https://api.open-meteo.com/v1/forecast"
     "?latitude=%.4f&longitude=%.4f"

@@ -5,7 +5,7 @@
 
 class SpaceXClient {
 public:
-  static bool fetch();
+  static bool fetch(float userLat = 0.0f, float userLon = 0.0f);
   static const SpaceXRecord &getData();
 
 private:

@@ -26,6 +26,11 @@
 #define BOARD_BOOT_PIN 28
 #endif
 
+// Hardware LP-UART (P5) dedicated for GPS on NM-CYD-C5
+#define GPS_RX_PIN    4
+#define GPS_TX_PIN    5
+#define GPS_BAUD      9600
+
 // Touchscreen Calibration for 320x240 landscape on NM-CYD-C5
 #define TOUCH_MIN_X 185
 #define TOUCH_MAX_X 3700
@@ -103,10 +108,14 @@ struct FlightRecord {
   bool  on_ground;
   float dist_km;
   float bearing;
-  char  origin[6];    // e.g. "LHR"
-  char  dest[6];      // e.g. "JFK"
-  char  aircraft[8];  // e.g. "B772"
-  char  airline[24];  // e.g. "United Airlines"
+  char  origin_code[6];   // e.g. "FAT"
+  char  origin_city[20];  // e.g. "Fresno"
+  char  dest_code[6];     // e.g. "GDL"
+  char  dest_city[20];    // e.g. "Guadalajara"
+  char  origin_name[36];  // e.g. "Fresno Yosemite"
+  char  dest_name[36];    // e.g. "Guadalajara Int'l"
+  char  aircraft[8];      // e.g. "A320"
+  char  airline[24];      // e.g. "Volaris"
   bool  route_fetched;
 };
 
@@ -137,14 +146,31 @@ struct IssRecord {
 };
 
 struct SpaceXRecord {
-  bool  valid;
-  char  mission_name[48];
-  char  rocket_name[24];
-  char  pad_name[36];
-  char  status_name[24];
-  char  net_iso[28];
+  bool    valid;
+  char    mission_name[48];
+  char    rocket_name[24];
+  char    pad_name[36];
+  char    location_name[36];  // e.g. "Vandenberg SFB, CA"
+  float   pad_lat;
+  float   pad_lon;
+  float   dist_km;            // Distance from user location
+  float   bearing;            // Bearing from user location
+  bool    visible_in_sky;     // Line-of-sight visible (< 500 km)
+  char    status_name[24];
+  char    net_iso[28];
   int64_t launch_epoch_utc;
-  char  details[96];
+  char    details[96];
+};
+
+struct GpsData {
+  bool  has_fix;
+  float lat;
+  float lon;
+  float alt_m;
+  int   satellites;
+  float speed_kmh;
+  float hdop;
+  unsigned long last_fix_ms;
 };
 
 struct CityPreset {
@@ -176,4 +202,5 @@ static const CityPreset CITY_PRESETS[] = {
 #define ISS_REFRESH_MS       (10UL * 1000UL)           // 10 seconds
 #define SPACEX_REFRESH_MS    (30UL * 60UL * 1000UL)    // 30 minutes
 #define CLOCK_REFRESH_MS     (1000UL)                  // 1 second
-#define SWEEP_ANIM_MS        (50UL)                    // Radar sweep animation frame
+#define SWEEP_ANIM_MS        (80UL)                    // Paced radar sweep animation frame
+#define EXTRAPOLATE_MS       (2000UL)                  // Aircraft dead-reckoning movement interval

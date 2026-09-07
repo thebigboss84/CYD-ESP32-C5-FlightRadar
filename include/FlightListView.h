@@ -10,8 +10,9 @@ public:
   static void clearDetail();
 
 private:
-  static void drawRow(int rowIdx, bool isSelected);
+  static void drawRow(int flightIdx, int displayRow, bool isSelected);
   static void drawDetail(int index);
 
   static int selectedFlightIdx;
+  static int currentPage;
 };

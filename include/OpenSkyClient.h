@@ -12,6 +12,7 @@ public:
   static float metersToFeet(float m);
   static float msToKnots(float ms);
   static void  fetchRoute(int index);
+  static void  extrapolatePositions(float dtSeconds, float userLat, float userLon);
 
 private:
   static void insertSorted(const FlightRecord &rec);

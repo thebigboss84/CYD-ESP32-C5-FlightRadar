@@ -5,6 +5,7 @@
 #include "AppConfig.h"
 #include "DisplayEngine.h"
 #include "ConfigPortal.h"
+#include "GpsManager.h"
 #include "OpenSkyClient.h"
 #include "WeatherClient.h"
 #include "IssClient.h"
@@ -17,15 +18,33 @@
 
 static AppMode currentMode = MODE_RADAR;
 
-static unsigned long lastOpenSkyFetch = 0;
-static unsigned long lastWeatherFetch = 0;
-static unsigned long lastIssFetch     = 0;
-static unsigned long lastSpaceXFetch  = 0;
-static unsigned long lastClockTick    = 0;
-static unsigned long lastSweepTick    = 0;
-static unsigned long lastCountdownTick = 0;
+static unsigned long lastOpenSkyFetch     = 0;
+static unsigned long lastWeatherFetch     = 0;
+static unsigned long lastIssFetch         = 0;
+static unsigned long lastSpaceXFetch      = 0;
+static unsigned long lastClockTick        = 0;
+static unsigned long lastSweepTick        = 0;
+static unsigned long lastCountdownTick    = 0;
+static unsigned long lastExtrapolateTick  = 0;
 
 static char timeString[24] = "12:00:00 AM";
+
+static float getActiveLat() {
+  return GpsManager::hasFix() ? GpsManager::getLat() : ConfigPortal::getLat();
+}
+
+static float getActiveLon() {
+  return GpsManager::hasFix() ? GpsManager::getLon() : ConfigPortal::getLon();
+}
+
+static const char *getActiveCityName() {
+  if (GpsManager::hasFix()) {
+    static char gpsCityBuf[24];
+    snprintf(gpsCityBuf, sizeof(gpsCityBuf), "GPS: %s", ConfigPortal::getCityName());
+    return gpsCityBuf;
+  }
+  return ConfigPortal::getCityName();
+}
 
 static void updateClockString() {
   struct tm timeinfo;
@@ -36,7 +55,7 @@ static void updateClockString() {
 
 static void redrawCurrentView() {
   updateClockString();
-  DisplayEngine::drawHeader(ConfigPortal::getCityName(), timeString, OpenSkyClient::getCount(), WiFi.isConnected());
+  DisplayEngine::drawHeader(getActiveCityName(), timeString, OpenSkyClient::getCount(), WiFi.isConnected());
 
   switch (currentMode) {
     case MODE_RADAR:
@@ -46,10 +65,10 @@ static void redrawCurrentView() {
       FlightListView::draw();
       break;
     case MODE_WEATHER:
-      WeatherView::draw(ConfigPortal::getCityName());
+      WeatherView::draw(getActiveCityName());
       break;
     case MODE_ISS:
-      IssView::draw(ConfigPortal::getCityName());
+      IssView::draw(getActiveCityName());
       break;
     case MODE_SPACEX:
       SpaceXView::draw();
@@ -62,12 +81,16 @@ static void redrawCurrentView() {
 }
 
 static void fetchCityData() {
-  DisplayEngine::showStatus("Acquiring airspace & satellite telemetry...", COL_YELLOW);
+  DisplayEngine::showStatus("Acquiring airspace & telemetry...", COL_YELLOW);
   configTzTime(ConfigPortal::getTimeZone(), "pool.ntp.org", "time.nist.gov");
-  OpenSkyClient::fetch(ConfigPortal::getLat(), ConfigPortal::getLon(), ConfigPortal::getRadius());
-  WeatherClient::fetch(ConfigPortal::getLat(), ConfigPortal::getLon());
-  IssClient::fetch(ConfigPortal::getLat(), ConfigPortal::getLon());
-  SpaceXClient::fetch();
+
+  float lat = getActiveLat();
+  float lon = getActiveLon();
+
+  OpenSkyClient::fetch(lat, lon, ConfigPortal::getRadius());
+  WeatherClient::fetch(lat, lon);
+  IssClient::fetch(lat, lon);
+  SpaceXClient::fetch(lat, lon);
 
   lastOpenSkyFetch = millis();
   lastWeatherFetch = millis();
@@ -87,6 +110,7 @@ void setup() {
   pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
 
   DisplayEngine::begin();
+  GpsManager::begin();
   ConfigPortal::loadSettings();
 
   bool forcePortal = !ConfigPortal::hasValidSettings();
@@ -108,124 +132,104 @@ void setup() {
                ConfigPortal::getRadius(), ConfigPortal::getLat(), ConfigPortal::getLon());
 
     // Big interactive touch button for setup
-    gfx->fillRoundRect(16, 92, 288, 56, 8, 0x0A54);
-    gfx->drawRoundRect(16, 92, 288, 56, 8, COL_CYAN);
-    gfx->setTextColor(COL_WHITE);
-    gfx->setTextSize(1);
-    gfx->setCursor(32, 106);
-    gfx->print("TAP ANYWHERE TO OPEN WIFI SETUP");
+    gfx->fillRoundRect(16, 92, 288, 36, 6, 0x0861);
+    gfx->drawRoundRect(16, 92, 288, 36, 6, COL_CYAN);
     gfx->setTextColor(COL_YELLOW);
-    gfx->setCursor(75, 124);
-    gfx->print("(or press BOOT button)");
+    gfx->setTextSize(1);
+    gfx->setCursor(32, 104);
+    gfx->print("TAP HERE TO CONFIGURE / OPEN PORTAL");
 
     gfx->setTextColor(COL_GRAY);
-    gfx->setCursor(16, 175);
-    gfx->print("Starting live telemetry in ");
+    gfx->setCursor(16, 140);
+    gfx->print("Booting live dashboard in 3 seconds...");
 
-    unsigned long splashStart = millis();
-    int lastSec = 4;
-    while (millis() - splashStart < 3500) {
-      int remainingSec = (3500 - (millis() - splashStart)) / 1000 + 1;
-      if (remainingSec != lastSec && remainingSec >= 1) {
-        lastSec = remainingSec;
-        gfx->fillRect(180, 175, 40, 10, COL_BG_DARK);
-        gfx->setTextColor(COL_CYAN);
-        gfx->setCursor(180, 175);
-        gfx->printf("%ds...", remainingSec);
-      }
-
+    unsigned long bootPromptStart = millis();
+    while (millis() - bootPromptStart < 3000) {
+      GpsManager::update();
       int tx, ty;
       if (DisplayEngine::readTouch(tx, ty)) {
-        forcePortal = true;
-        break;
+        if (ty >= 80 && ty <= 140) {
+          forcePortal = true;
+          break;
+        }
       }
-      if (digitalRead(BOARD_BOOT_PIN) == LOW) {
-        forcePortal = true;
-        break;
-      }
-      delay(20);
+      delay(50);
     }
   }
 
   if (forcePortal) {
+    DisplayEngine::showStatus("Starting Setup Portal...", COL_CYAN);
     ConfigPortal::runPortal();
+    Serial.println("[Setup] Portal finished. Proceeding with active configuration.");
   }
 
-  DisplayEngine::getGfx()->fillScreen(COL_BG_DARK);
+  // Connect to configured Wi-Fi
   DisplayEngine::showStatus("Connecting to Wi-Fi...", COL_CYAN);
-
   WiFi.mode(WIFI_STA);
   WiFi.begin(ConfigPortal::getSsid(), ConfigPortal::getPass());
 
-  unsigned long wifiStart = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - wifiStart < 20000) {
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && retries < 25) {
+    GpsManager::update();
     delay(500);
     Serial.print(".");
+    retries++;
   }
+  Serial.println();
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("\n[WiFi] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
-    DisplayEngine::showStatus("Synchronizing NTP atomic time...", COL_GREEN);
+    Serial.printf("[WiFi] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
+    DisplayEngine::showStatus("Wi-Fi Connected! Syncing time...", COL_GREEN);
     configTzTime(ConfigPortal::getTimeZone(), "pool.ntp.org", "time.nist.gov");
-    delay(800);
+    delay(1000);
   } else {
-    Serial.println("\n[WiFi] Connection failed! Starting in offline demo mode.");
-    DisplayEngine::showStatus("Wi-Fi connection failed!", COL_RED);
-    delay(1500);
+    Serial.println("[WiFi] Connection failed! Starting Web Setup Portal...");
+    DisplayEngine::showStatus("Wi-Fi failed. Opening portal...", COL_RED);
+    ConfigPortal::runPortal();
   }
 
+  // Fetch initial telemetry
   fetchCityData();
 }
 
 void loop() {
   unsigned long now = millis();
 
-  // Physical BOOT button (GPIO 28)
+  // 1. Process GPS UART incoming sentences
+  GpsManager::update();
+
+  // If GPS acquired a 3D fix and moved significantly, update telemetry
+  if (GpsManager::hasMovedSignificantly(3.0f)) {
+    Serial.printf("[GPS] Position update: %.4f, %.4f. Refreshing telemetry...\n",
+                  GpsManager::getLat(), GpsManager::getLon());
+    fetchCityData();
+  }
+
+  // 2. Hardware BOOT Button check
   if (digitalRead(BOARD_BOOT_PIN) == LOW) {
     delay(50);
     if (digitalRead(BOARD_BOOT_PIN) == LOW) {
-      unsigned long pressStart = millis();
-      while (digitalRead(BOARD_BOOT_PIN) == LOW && millis() - pressStart < 1500) {
-        delay(20);
-      }
-      if (millis() - pressStart >= 1200) {
-        DisplayEngine::showStatus("Opening WiFi / City Setup...", COL_YELLOW);
-        delay(400);
-        ConfigPortal::runPortal();
-        DisplayEngine::getGfx()->fillScreen(COL_BG_DARK);
-        fetchCityData();
-      } else {
-        currentMode = (AppMode)(((int)currentMode + 1) % MODE_COUNT);
-        FlightListView::clearDetail();
-        redrawCurrentView();
-      }
-      while (digitalRead(BOARD_BOOT_PIN) == LOW) delay(10);
+      Serial.println("[Button] BOOT button pressed - cycling display mode...");
+      currentMode = (AppMode)((currentMode + 1) % MODE_COUNT);
+      FlightListView::clearDetail();
+      redrawCurrentView();
+      while (digitalRead(BOARD_BOOT_PIN) == LOW) delay(20);
     }
   }
 
+  // 3. Touch Handling
   int tx, ty;
   if (DisplayEngine::readTouch(tx, ty)) {
-    // 1. Top Header Bar Touches
-    if (ty < HEADER_H + 4) {
-      // Tapped [SET] on the right
+    // Top Bar Touches (Y: 0..HEADER_H)
+    if (ty < HEADER_H) {
+      // Setup button [SET] touched (x: 260..320)
       if (tx >= 260) {
-        DisplayEngine::showStatus("Opening WiFi / City Setup...", COL_YELLOW);
-        delay(400);
+        Serial.println("[Touch] SETUP button pressed. Launching Config Portal...");
         ConfigPortal::runPortal();
-        DisplayEngine::getGfx()->fillScreen(COL_BG_DARK);
-        fetchCityData();
-      }
-      // Tapped City Name on the left
-      else if (tx < 115) {
-        if (ConfigPortal::isCustomCity()) {
-          ConfigPortal::setCityPreset(0);
-        } else {
-          ConfigPortal::setCustomCity();
-        }
         fetchCityData();
       }
     }
-    // 2. Footer Navigation Bar
+    // Footer Navigation Bar Touches (Y: SCREEN_H - FOOTER_H..SCREEN_H)
     else if (ty >= SCREEN_H - FOOTER_H) {
       int tabW = SCREEN_W / 6;
       int tabIdx = tx / tabW;
@@ -241,7 +245,7 @@ void loop() {
         fetchCityData();
       }
     }
-    // 3. Content Area Touches
+    // Content Area Touches
     else if (ty >= CONTENT_Y && ty < SCREEN_H - FOOTER_H) {
       if (currentMode == MODE_FLIGHT_LIST) {
         FlightListView::handleTouch(tx, ty);
@@ -249,10 +253,11 @@ void loop() {
     }
   }
 
+  // 4. Periodic API Data Fetching
   if (WiFi.isConnected()) {
     if (now - lastOpenSkyFetch >= OPENSKY_REFRESH_MS) {
       lastOpenSkyFetch = now;
-      OpenSkyClient::fetch(ConfigPortal::getLat(), ConfigPortal::getLon(), ConfigPortal::getRadius());
+      OpenSkyClient::fetch(getActiveLat(), getActiveLon(), ConfigPortal::getRadius());
       if (currentMode == MODE_RADAR || currentMode == MODE_FLIGHT_LIST) {
         redrawCurrentView();
       }
@@ -260,7 +265,7 @@ void loop() {
 
     if (now - lastWeatherFetch >= WEATHER_REFRESH_MS) {
       lastWeatherFetch = now;
-      WeatherClient::fetch(ConfigPortal::getLat(), ConfigPortal::getLon());
+      WeatherClient::fetch(getActiveLat(), getActiveLon());
       if (currentMode == MODE_WEATHER) {
         redrawCurrentView();
       }
@@ -268,25 +273,34 @@ void loop() {
 
     if (now - lastIssFetch >= ISS_REFRESH_MS) {
       lastIssFetch = now;
-      IssClient::fetch(ConfigPortal::getLat(), ConfigPortal::getLon());
+      IssClient::fetch(getActiveLat(), getActiveLon());
       if (currentMode == MODE_ISS) {
-        IssView::draw(ConfigPortal::getCityName());
+        IssView::draw(getActiveCityName());
       }
     }
 
     if (now - lastSpaceXFetch >= SPACEX_REFRESH_MS) {
       lastSpaceXFetch = now;
-      SpaceXClient::fetch();
+      SpaceXClient::fetch(getActiveLat(), getActiveLon());
       if (currentMode == MODE_SPACEX) {
         redrawCurrentView();
       }
     }
   }
 
+  // 5. Radar Display Animations & Dead Reckoning
   if (currentMode == MODE_RADAR) {
+    // Paced tactical sweep beam animation (every SWEEP_ANIM_MS, e.g. 80ms)
     if (now - lastSweepTick >= SWEEP_ANIM_MS) {
       lastSweepTick = now;
       FlightRadarView::updateSweep(ConfigPortal::getRadius());
+    }
+
+    // Aircraft dead-reckoning extrapolation (every EXTRAPOLATE_MS, e.g. 2000ms)
+    if (now - lastExtrapolateTick >= EXTRAPOLATE_MS) {
+      lastExtrapolateTick = now;
+      OpenSkyClient::extrapolatePositions(EXTRAPOLATE_MS / 1000.0f, getActiveLat(), getActiveLon());
+      FlightRadarView::draw(ConfigPortal::getRadius());
     }
   } else if (currentMode == MODE_SPACEX) {
     if (now - lastCountdownTick >= 1000) {
@@ -295,10 +309,11 @@ void loop() {
     }
   }
 
+  // 6. Clock Update
   if (now - lastClockTick >= CLOCK_REFRESH_MS) {
     lastClockTick = now;
     updateClockString();
-    DisplayEngine::drawHeader(ConfigPortal::getCityName(), timeString, OpenSkyClient::getCount(), WiFi.isConnected());
+    DisplayEngine::drawHeader(getActiveCityName(), timeString, OpenSkyClient::getCount(), WiFi.isConnected());
   }
 
   delay(10);
