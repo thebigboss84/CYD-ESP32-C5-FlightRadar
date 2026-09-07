@@ -70,10 +70,32 @@ void IssView::draw(const char *cityName) {
   gfx->setCursor(10, boxY + 120);
   gfx->printf("BEARING: %.0f deg (%s)\n", iss.bearing, OpenSkyClient::getCompassDir(iss.bearing));
 
-  if (iss.dist_km < 800.0f) {
+  // Calculate Horizon Elevation Angle
+  float theta = (iss.dist_km / 6371.0f);
+  float Re = 6371.0f;
+  float R_iss = Re + (iss.alt_km > 100.0f ? iss.alt_km : 420.0f);
+  float slantRange = sqrtf(Re * Re + R_iss * R_iss - 2.0f * Re * R_iss * cosf(theta));
+  float sinElev = (R_iss * cosf(theta) - Re) / slantRange;
+  float elevDeg = asinf(constrain(sinElev, -1.0f, 1.0f)) * 180.0f / (float)M_PI;
+
+  gfx->setCursor(10, boxY + 136);
+  if (elevDeg > 0.0f) {
     gfx->setTextColor(COL_GREEN);
-    gfx->setCursor(10, boxY + 136);
-    gfx->print("*** IN LOCAL VISIBLE SKY PASS ***");
+    gfx->printf("ELEVATION: +%.0f deg (ABOVE HORIZON)\n", elevDeg);
+  } else {
+    gfx->setTextColor(COL_DIM_GRAY);
+    gfx->printf("ELEVATION: %.0f deg (BELOW HORIZON)\n", elevDeg);
+  }
+
+  // Naked-eye visibility alert
+  if (elevDeg > 5.0f && iss.daylight) {
+    int alrtY = CONTENT_Y + CONTENT_H - 18;
+    gfx->fillRoundRect(6, alrtY, SCREEN_W - 12, 16, 3, 0x02E5);
+    gfx->drawRoundRect(6, alrtY, SCREEN_W - 12, 16, 3, 0x07E0);
+    gfx->setTextColor(0xFFFF);
+    gfx->setCursor(12, alrtY + 4);
+    gfx->printf("LOOK UP! ISS VISIBLE AT %.0f deg %s (Elev +%.0f deg)",
+                iss.bearing, OpenSkyClient::getCompassDir(iss.bearing), elevDeg);
   }
 
   int compX = 245;

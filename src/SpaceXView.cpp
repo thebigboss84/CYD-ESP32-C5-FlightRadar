@@ -68,7 +68,7 @@ void SpaceXView::draw() {
       gfx->drawRoundRect(8, visY, SCREEN_W - 16, 16, 3, 0x07E0);
       gfx->setTextColor(0xFFFF);
       gfx->setCursor(14, visY + 4);
-      gfx->printf("LOCAL SKY: %.0fkm %s - VISIBLE IN SKY!",
+      gfx->printf("LOOK OUTSIDE! %.0fkm %s - VISIBLE IN SKY!",
                   sp.dist_km, getCompassStr(sp.bearing));
     } else {
       // Distant launch (e.g. Cape Canaveral / Boca Chica) - Slate card

@@ -5,10 +5,50 @@
 #include <math.h>
 
 float FlightRadarView::sweepAngle = 0.0f;
+float FlightRadarView::currentRadiusKm = 100.0f;
+TrafficFilter FlightRadarView::activeFilter = FILTER_ALL;
 
-void FlightRadarView::draw(float radiusKm) {
+void FlightRadarView::cycleZoom() {
+  if (currentRadiusKm <= 25.0f) currentRadiusKm = 50.0f;
+  else if (currentRadiusKm <= 50.0f) currentRadiusKm = 100.0f;
+  else if (currentRadiusKm <= 100.0f) currentRadiusKm = 150.0f;
+  else currentRadiusKm = 25.0f;
+  Serial.printf("[Radar] Zoom scale changed to: %.0f km\n", currentRadiusKm);
+}
+
+void FlightRadarView::cycleFilter() {
+  activeFilter = (TrafficFilter)((activeFilter + 1) % FILTER_COUNT);
+  const char *names[] = { "ALL", "MILITARY", "POLICE/HELO" };
+  Serial.printf("[Radar] Traffic filter changed to: %s\n", names[activeFilter]);
+}
+
+float FlightRadarView::getZoomRadius() {
+  return currentRadiusKm;
+}
+
+TrafficFilter FlightRadarView::getActiveFilter() {
+  return activeFilter;
+}
+
+bool FlightRadarView::handleTouch(int tx, int ty) {
+  // Check touch on Top-Left HUD Card (generous hit box for finger tap)
+  if (tx >= 0 && tx <= 90 && ty >= CONTENT_Y && ty <= CONTENT_Y + 48) {
+    if (ty <= CONTENT_Y + 23) {
+      cycleZoom();
+    } else {
+      cycleFilter();
+    }
+    draw(currentRadiusKm);
+    return true;
+  }
+  return false;
+}
+
+void FlightRadarView::draw(float defaultRadiusKm) {
   Arduino_GFX *gfx = DisplayEngine::getGfx();
   if (!gfx) return;
+
+  float radiusKm = currentRadiusKm;
 
   // 1. Deep aerospace pitch-black canvas
   gfx->fillRect(0, CONTENT_Y, SCREEN_W, CONTENT_H, 0x0000);
@@ -50,7 +90,7 @@ void FlightRadarView::draw(float radiusKm) {
   gfx->drawFastVLine(cx, cy - r + 6, (r / 2) - 10, 0x0144);
   gfx->drawFastVLine(cx, cy + 4,     (r / 2) - 10, 0x0144);
 
-  // Range distance tags (placed at top-right diagonal)
+  // Range distance tags (top-right diagonal)
   char rBuf[16];
   gfx->setTextColor(0x02CF);
   snprintf(rBuf, sizeof(rBuf), "%.0fk", radiusKm * 0.5f);
@@ -68,15 +108,21 @@ void FlightRadarView::draw(float radiusKm) {
   // 4. Corner Avionics Badges
   int count = OpenSkyClient::getCount();
 
-  // Top-Left Badge: Range & Targets & GPS status
-  gfx->fillRoundRect(4, CONTENT_Y + 4, 62, 34, 4, 0x0842);
-  gfx->drawRoundRect(4, CONTENT_Y + 4, 62, 34, 4, 0x0269);
+  // Top-Left Badge: Range (Tap to Zoom) & Filter (Tap to Filter)
+  gfx->fillRoundRect(4, CONTENT_Y + 4, 64, 34, 4, 0x0842);
+  gfx->drawRoundRect(4, CONTENT_Y + 4, 64, 34, 4, 0x0269);
 
   gfx->setTextColor(0x8410); gfx->setCursor(8, CONTENT_Y + 7);  gfx->print("RNG:");
   gfx->setTextColor(COL_CYAN); gfx->printf("%.0fk", radiusKm);
 
-  gfx->setTextColor(0x8410); gfx->setCursor(8, CONTENT_Y + 17); gfx->print("TGT:");
-  gfx->setTextColor(count > 0 ? 0x07E0 : COL_YELLOW); gfx->printf("%d", count);
+  gfx->setTextColor(0x8410); gfx->setCursor(8, CONTENT_Y + 17); gfx->print("FLT:");
+  if (activeFilter == FILTER_ALL) {
+    gfx->setTextColor(count > 0 ? 0x07E0 : COL_YELLOW); gfx->printf("%d ALL", count);
+  } else if (activeFilter == FILTER_MILITARY) {
+    gfx->setTextColor(0xFD20); gfx->print("MILITARY");
+  } else {
+    gfx->setTextColor(0x07E0); gfx->print("HELO/COP");
+  }
 
   gfx->setCursor(8, CONTENT_Y + 27);
   if (GpsManager::hasFix()) {
@@ -121,13 +167,30 @@ void FlightRadarView::draw(float radiusKm) {
   gfx->setTextColor(0xFFE0); gfx->setCursor(SCREEN_W - 52, CONTENT_Y + CONTENT_H - 18); gfx->print("v <10k");
   gfx->setTextColor(0x632C); gfx->setCursor(SCREEN_W - 52, CONTENT_Y + CONTENT_H - 9);  gfx->print("_ GND");
 
-  // 5. Draw Aircraft Targets (Crisp, Directional Chevrons)
+  // 5. Emergency Squawk Alert Banner (If Active)
+  const FlightRecord *emg = OpenSkyClient::getEmergencyFlight();
+  if (emg) {
+    int emgY = CONTENT_Y + 42;
+    gfx->fillRoundRect(30, emgY, SCREEN_W - 60, 18, 4, 0xF800); // Bright Red Banner
+    gfx->drawRoundRect(30, emgY, SCREEN_W - 60, 18, 4, 0xFFFF);
+    gfx->setTextColor(0xFFFF);
+    gfx->setTextSize(1);
+    gfx->setCursor(36, emgY + 5);
+    gfx->printf("! EMERGENCY %s: %s (%.0fft)",
+                emg->squawk, emg->callsign, OpenSkyClient::metersToFeet(emg->alt_m));
+  }
+
+  // 6. Draw Aircraft Targets
   float scale = (float)r / radiusKm;
   int labelsDrawn = 0;
 
   for (int i = 0; i < count; i++) {
     const FlightRecord *f = OpenSkyClient::getFlight(i);
     if (!f) continue;
+
+    // Apply active traffic filter
+    if (activeFilter == FILTER_MILITARY && !f->is_military) continue;
+    if (activeFilter == FILTER_HELO_POLICE && !f->is_helo_police) continue;
 
     float bngRad = f->bearing * (float)M_PI / 180.0f;
     int sx = cx + (int)(sinf(bngRad) * f->dist_km * scale);
@@ -138,9 +201,12 @@ void FlightRadarView::draw(float radiusKm) {
     int dy = sy - cy;
     if ((dx * dx + dy * dy) > (r - 2) * (r - 2)) continue;
 
-    // Altitude Color
+    // Altitude / Emergency Color
     uint16_t col;
-    if (f->on_ground) col = 0x632C;                     // Muted gray
+    if (f->is_emergency) col = 0xF800;                 // Flash Red
+    else if (f->is_military) col = 0xFD20;             // Military Orange
+    else if (f->is_helo_police) col = 0x07E0;          // Police Emerald
+    else if (f->on_ground) col = 0x632C;               // Muted gray
     else if (!isnan(f->alt_m) && f->alt_m > 6096.0f) col = 0x07FF; // Cyan (> 20,000 ft)
     else if (!isnan(f->alt_m) && f->alt_m > 3048.0f) col = 0x07E0; // Emerald Green (10k - 20k ft)
     else col = 0xFFE0;                                  // Amber Yellow (< 10,000 ft)
@@ -148,22 +214,24 @@ void FlightRadarView::draw(float radiusKm) {
     if (f->on_ground) {
       // Ground target: small 3x3 square
       gfx->fillRect(sx - 1, sy - 1, 3, 3, col);
+    } else if (f->is_helo_police) {
+      // Helicopter / First Responder: '+' crosshair blip
+      gfx->drawFastHLine(sx - 3, sy, 7, col);
+      gfx->drawFastVLine(sx, sy - 3, 7, col);
+      gfx->drawPixel(sx, sy, COL_WHITE);
     } else {
-      // Airborne target: high-tech directional chevron
+      // Directional chevron
       float trkRad = f->track * (float)M_PI / 180.0f;
       float sinT = sinf(trkRad);
       float cosT = cosf(trkRad);
 
-      // Core illuminated blip
       gfx->fillCircle(sx, sy, 2, col);
       gfx->drawPixel(sx, sy, COL_WHITE);
 
-      // Velocity / heading vector line (7 pixels)
       int hx = sx + (int)(sinT * 8.0f);
       int hy = sy - (int)(cosT * 8.0f);
       gfx->drawLine(sx, sy, hx, hy, col);
 
-      // Mini wings crossbar (4 pixels)
       int wx = sx + (int)(sinT * 3.0f);
       int wy = sy - (int)(cosT * 3.0f);
       int w1x = wx + (int)(-cosT * 3.0f);
@@ -173,7 +241,13 @@ void FlightRadarView::draw(float radiusKm) {
       gfx->drawLine(w1x, w1y, w2x, w2y, col);
     }
 
-    // Smart Callout Tags: ONLY label top 3 closest aircraft
+    // Emergency Target Reticle
+    if (f->is_emergency) {
+      gfx->drawRect(sx - 6, sy - 6, 13, 13, 0xF800);
+      gfx->drawRect(sx - 7, sy - 7, 15, 15, 0xFFFF);
+    }
+
+    // Smart Callout Tags: Top 3 closest aircraft
     if (!f->on_ground && labelsDrawn < 3 && strlen(f->callsign) > 1) {
       labelsDrawn++;
       int tagLen = strlen(f->callsign);
@@ -186,14 +260,10 @@ void FlightRadarView::draw(float radiusKm) {
       if (ty < CONTENT_Y + 40) ty = CONTENT_Y + 40;
       if (ty + tagH > CONTENT_Y + CONTENT_H - 22) ty = CONTENT_Y + CONTENT_H - 31;
 
-      // Solid background card
       gfx->fillRect(tx - 1, ty - 1, tagW, tagH, 0x0000);
-      gfx->drawRect(tx - 1, ty - 1, tagW, tagH, 0x0269);
+      gfx->drawRect(tx - 1, ty - 1, tagW, tagH, f->is_emergency ? 0xF800 : 0x0269);
+      gfx->drawLine(sx, sy, (tx > sx) ? (tx - 1) : (tx + tagW), ty + 4, f->is_emergency ? 0xF800 : 0x0269);
 
-      // Leader line
-      gfx->drawLine(sx, sy, (tx > sx) ? (tx - 1) : (tx + tagW), ty + 4, 0x0269);
-
-      // Callsign
       gfx->setTextColor(col);
       gfx->setCursor(tx + 1, ty);
       gfx->print(f->callsign);
@@ -210,10 +280,11 @@ void FlightRadarView::draw(float radiusKm) {
   }
 }
 
-void FlightRadarView::updateSweep(float radiusKm) {
+void FlightRadarView::updateSweep(float defaultRadiusKm) {
   Arduino_GFX *gfx = DisplayEngine::getGfx();
   if (!gfx) return;
 
+  float radiusKm = currentRadiusKm;
   const int cx = 160;
   const int cy = 119;
   const int r  = 90;
@@ -257,7 +328,6 @@ void FlightRadarView::updateSweep(float radiusKm) {
     float angleDiff = fabsf(f->bearing - sweepAngle);
     if (angleDiff > 180.0f) angleDiff = 360.0f - angleDiff;
 
-    // Ping target if beam is within 3.5 degrees
     if (angleDiff <= 3.5f) {
       float bngRad = f->bearing * (float)M_PI / 180.0f;
       int sx = cx + (int)(sinf(bngRad) * f->dist_km * scale);
@@ -265,7 +335,7 @@ void FlightRadarView::updateSweep(float radiusKm) {
       int dx = sx - cx;
       int dy = sy - cy;
       if ((dx * dx + dy * dy) <= (r - 2) * (r - 2)) {
-        gfx->fillCircle(sx, sy, 3, COL_WHITE); // Phosphor ping
+        gfx->fillCircle(sx, sy, 3, f->is_emergency ? 0xF800 : COL_WHITE);
       }
     }
   }

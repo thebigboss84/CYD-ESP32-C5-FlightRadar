@@ -250,8 +250,54 @@ bool OpenSkyClient::fetch(float userLat, float userLon, float radiusKm) {
     r.on_ground = state[8].isNull()  ? false : state[8].as<bool>();
     r.vel_ms    = state[9].isNull()  ? 0.0f : state[9].as<float>();
     r.track     = state[10].isNull() ? 0.0f : state[10].as<float>();
+    r.vertical_rate_ms = state[11].isNull() ? 0.0f : state[11].as<float>();
     r.dist_km   = dist;
     r.bearing   = calcBearing(userLat, userLon, lat, lon);
+
+    // 1. Squawk parsing & Emergency Interception (7700/7600/7500)
+    const char *sq = state[14] | "";
+    strncpy(r.squawk, sq, sizeof(r.squawk) - 1);
+    r.squawk[sizeof(r.squawk) - 1] = '\0';
+
+    r.is_emergency = false;
+    r.emergency_code = 0;
+    if (strcmp(r.squawk, "7700") == 0 || strcmp(r.squawk, "7600") == 0 || strcmp(r.squawk, "7500") == 0) {
+      r.is_emergency = true;
+      r.emergency_code = atoi(r.squawk);
+      Serial.printf("[ALERT] EMERGENCY SQUAWK %s DETECTED! Flight: %s, Alt: %.0fm\n",
+                    r.squawk, r.callsign, r.alt_m);
+    }
+
+    // 2. Military Aircraft Classification
+    String csUpper = cs;
+    csUpper.toUpperCase();
+    String icaoLower = String(r.icao);
+    icaoLower.toLowerCase();
+
+    r.is_military = false;
+    if (csUpper.startsWith("RCH") || csUpper.startsWith("REACH") ||
+        csUpper.startsWith("JAKE") || csUpper.startsWith("TOPCAT") ||
+        csUpper.startsWith("NAVY") || csUpper.startsWith("USAF") ||
+        csUpper.startsWith("GUARD") || csUpper.startsWith("PAT") ||
+        csUpper.startsWith("DUKE") || csUpper.startsWith("VIPER") ||
+        csUpper.startsWith("COBRA") || csUpper.startsWith("HAWK") ||
+        csUpper.startsWith("HOIST") || csUpper.startsWith("CNV") ||
+        csUpper.startsWith("VMX") || csUpper.startsWith("AF1") ||
+        icaoLower.startsWith("ae") || icaoLower.startsWith("af")) {
+      r.is_military = true;
+    }
+
+    // 3. Police, Sheriff, CalFire & Medical Helo Classification
+    r.is_helo_police = false;
+    if (csUpper.startsWith("CHP") || csUpper.startsWith("LAPD") ||
+        csUpper.startsWith("LASD") || csUpper.startsWith("AIR") ||
+        csUpper.startsWith("CALFIRE") || csUpper.startsWith("TANKER") ||
+        csUpper.startsWith("MERCY") || csUpper.startsWith("ANGEL") ||
+        csUpper.startsWith("MEDEVAC") || csUpper.startsWith("LIFE") ||
+        csUpper.startsWith("POLICE") || csUpper.startsWith("SHERIFF") ||
+        (!r.on_ground && r.alt_m > 0 && r.alt_m < 850.0f && r.vel_ms > 5.0f && r.vel_ms < 75.0f)) {
+      r.is_helo_police = true;
+    }
 
     r.origin_code[0] = '\0';
     r.origin_city[0] = '\0';
@@ -275,4 +321,27 @@ bool OpenSkyClient::fetch(float userLat, float userLon, float radiusKm) {
   }
 
   return true;
+}
+
+bool OpenSkyClient::hasActiveEmergency() {
+  for (int i = 0; i < flightCount; i++) {
+    if (flights[i].is_emergency) return true;
+  }
+  return false;
+}
+
+const FlightRecord *OpenSkyClient::getEmergencyFlight() {
+  for (int i = 0; i < flightCount; i++) {
+    if (flights[i].is_emergency) return &flights[i];
+  }
+  return nullptr;
+}
+
+bool OpenSkyClient::hasAircraftOverhead(float thresholdKm) {
+  for (int i = 0; i < flightCount; i++) {
+    if (!flights[i].on_ground && flights[i].dist_km <= thresholdKm) {
+      return true;
+    }
+  }
+  return false;
 }

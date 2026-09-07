@@ -15,6 +15,7 @@
 #include "WeatherView.h"
 #include "IssView.h"
 #include "SpaceXView.h"
+#include "LedBeacon.h"
 
 static AppMode currentMode = MODE_RADAR;
 
@@ -110,6 +111,7 @@ void setup() {
   pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
 
   DisplayEngine::begin();
+  LedBeacon::begin();
   GpsManager::begin();
   ConfigPortal::loadSettings();
 
@@ -249,6 +251,8 @@ void loop() {
     else if (ty >= CONTENT_Y && ty < SCREEN_H - FOOTER_H) {
       if (currentMode == MODE_FLIGHT_LIST) {
         FlightListView::handleTouch(tx, ty);
+      } else if (currentMode == MODE_RADAR) {
+        FlightRadarView::handleTouch(tx, ty);
       }
     }
   }
@@ -315,6 +319,24 @@ void loop() {
     updateClockString();
     DisplayEngine::drawHeader(getActiveCityName(), timeString, OpenSkyClient::getCount(), WiFi.isConnected());
   }
+
+  // 7. WS2812 Aerospace RGB Beacon Updates
+  LedBeacon::setEmergency(OpenSkyClient::hasActiveEmergency());
+  LedBeacon::setAircraftOverhead(OpenSkyClient::hasAircraftOverhead(6.0f));
+
+  const SpaceXRecord &sp = SpaceXClient::getData();
+  if (sp.valid && sp.visible_in_sky && sp.launch_epoch_utc > 0) {
+    time_t nowUtc = time(nullptr);
+    int64_t diff = sp.launch_epoch_utc - (int64_t)nowUtc;
+    LedBeacon::setSpaceXState(diff > 0 && diff <= 900, diff <= 0 && diff >= -600);
+  } else {
+    LedBeacon::setSpaceXState(false, false);
+  }
+
+  const IssRecord &iss = IssClient::getData();
+  LedBeacon::setIssPass(iss.valid && iss.dist_km <= 800.0f && iss.daylight);
+
+  LedBeacon::update();
 
   delay(10);
 }

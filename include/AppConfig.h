@@ -89,6 +89,13 @@ enum AppMode {
   MODE_COUNT
 };
 
+enum TrafficFilter {
+  FILTER_ALL = 0,
+  FILTER_MILITARY,
+  FILTER_HELO_POLICE,
+  FILTER_COUNT
+};
+
 // ============================================================================
 // DATA STRUCTURES
 // ============================================================================
@@ -116,6 +123,12 @@ struct FlightRecord {
   char  dest_name[36];    // e.g. "Guadalajara Int'l"
   char  aircraft[8];      // e.g. "A320"
   char  airline[24];      // e.g. "Volaris"
+  char  squawk[6];        // e.g. "7700", "1200"
+  bool  is_emergency;     // true if 7700, 7600, 7500
+  int   emergency_code;   // 7700, 7600, 7500
+  bool  is_military;      // true if USAF, USN, C17, etc.
+  bool  is_helo_police;   // true if police, fire, medical, rotorcraft
+  float vertical_rate_ms; // m/s (+ climb, - descent)
   bool  route_fetched;
 };
 

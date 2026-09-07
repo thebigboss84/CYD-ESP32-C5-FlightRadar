@@ -14,6 +14,11 @@ public:
   static void  fetchRoute(int index);
   static void  extrapolatePositions(float dtSeconds, float userLat, float userLon);
 
+  // Emergency & Proximity queries
+  static bool hasActiveEmergency();
+  static const FlightRecord *getEmergencyFlight();
+  static bool hasAircraftOverhead(float thresholdKm = 6.0f);
+
 private:
   static void insertSorted(const FlightRecord &rec);
   static float calcHaversine(float lat1, float lon1, float lat2, float lon2);
