@@ -115,6 +115,14 @@ Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
     * **Dubai, UAE** (25.20°N, 55.27°E - Emirates)
 * **Active Indicator & Live Refresh**: Highlights the currently active airspace with a cyan glow and `[ACTIVE]` tag. Tapping any card immediately switches location, adjusts the local timezone, and re-queries live OpenSky flights, Open-Meteo weather, ISS pass elevation, and SpaceX line-of-sight!
 
+### 10. 3D Printable Tactical Desktop Enclosure
+* **Turnkey 3D Printing Files in [`/enclosure`](enclosure/)**:
+  * **`AeroRadar_Front_Bezel.stl`**: Precision faceplate with recessed LCD window, 45° touch-swipe chamfer, WS2812 LED indicator aperture, and M3 counterbored screw recesses.
+  * **`AeroRadar_Rear_Enclosure.stl`**: Main chassis featuring internal PCB standoffs, a dedicated upward-facing cradle for the **GY-GPS6MV2 module & ceramic antenna**, USB-C port cutout, and thermal airflow ventilation louvers.
+  * **`AeroRadar_Desk_Stand_25deg.stl`**: Ergonomic 25° viewing angle desk cradle with rear USB-C cable management tunnel.
+  * **`AeroRadar_CYD_C5.scad`**: Parametric OpenSCAD CAD source file for customized tolerances.
+* See the complete [**3D Printing & Assembly Guide**](enclosure/3D_PRINTING_GUIDE.md) for recommended slicer settings, orientation, hardware BOM, and step-by-step wiring instructions.
+
 ---
 
 ## Installation & Build
