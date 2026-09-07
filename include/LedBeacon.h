@@ -18,6 +18,7 @@ public:
   static void update();
 
   static void setEmergency(bool active);
+  static void setSeismicAlert(bool active, float mag = 0.0f);
   static void setSpaceXState(bool countdown, bool liftoff);
   static void setIssPass(bool active);
   static void setAircraftOverhead(bool active);
@@ -26,6 +27,8 @@ public:
 
 private:
   static bool emergencyActive;
+  static bool seismicAlert;
+  static float seismicMag;
   static bool spaceXCountdown;
   static bool spaceXLiftoff;
   static bool issPassActive;

@@ -37,11 +37,12 @@ Inspired by [Flight-CYD-ESP32-Radar](https://github.com/Coreymillia/Flight-CYD-E
 
 ### 2. WS2812 RGB LED Aerospace Beacon (GPIO 27)
 Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
-* **Priority 1 (Red Strobe @ 10 Hz)**: Active in-flight emergency squawk (`7700`, `7600`, `7500`).
-* **Priority 2 (Rapid Amber Strobe @ 4 Hz)**: Active SpaceX liftoff visible in sky (T-0 to T+10m).
-* **Priority 3 (Pulsing Amber Breath)**: SpaceX launch countdown (T-15m to T-0).
-* **Priority 4 (Interstellar Purple Breath)**: ISS visible overhead pass (< 800 km in daylight).
-* **Priority 5 (Double White Wingtip Strobe)**: Aircraft passing directly overhead (< 6 km, 2.2s period).
+* **Priority 1 (Emergency Red Strobe @ 10 Hz)**: Active in-flight emergency squawk (`7700`, `7600`, `7500`).
+* **Priority 2 (Pulsing Warning Red @ 2 Hz)**: Active Seismic Earthquake Alert ($M \ge 2.0$ within 200 km of current GPS/city coordinates, < 90 min).
+* **Priority 3 (Rapid Amber Strobe @ 4 Hz)**: Active SpaceX liftoff visible in sky (T-0 to T+10m).
+* **Priority 4 (Pulsing Amber Breath)**: SpaceX launch countdown (T-15m to T-0).
+* **Priority 5 (Interstellar Purple Breath)**: ISS visible overhead pass (< 800 km in daylight).
+* **Priority 6 (Double White Wingtip Strobe)**: Aircraft passing directly overhead (< 6 km, 2.2s period).
 * **Standby**: Ambient dim tactical breathing glow.
 
 ### 3. Flight Directory & Route Inspector
@@ -123,6 +124,23 @@ Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
   * **`AeroRadar_CYD_C5.scad`**: Parametric OpenSCAD CAD source file for customized tolerances.
 * See the complete [**3D Printing & Assembly Guide**](enclosure/3D_PRINTING_GUIDE.md) for recommended slicer settings, orientation, hardware BOM, and step-by-step wiring instructions.
 
+### 11. USGS Real-Time Seismic Observatory & Earthquake Warning System
+* **Live USGS FDSNWS GeoJSON Feeds**: Queries the United States Geological Survey real-time earthquake database within a **200 km radius** of your active GPS location or selected city.
+* **Earthquake Early Warning Trigger**: Flags an active emergency alert if a tremor meets:
+  * **Magnitude $M \ge 2.0$** (filters imperceptible micro-tremors).
+  * **Proximity $\le 200\text{ km}$** from current GPS/city coordinates.
+  * **Elapsed Time $\le 90\text{ minutes}$** since origin time.
+* **Visual & Hardware Alarm**:
+  * **WS2812 LED Beacon (GPIO 27)**: Pulses high-intensity **Warning Red @ 2 Hz** (650 ms period) at 100% duty brightness.
+  * **Radar Scope Alert Banner**: Renders `! SEISMIC M{mag}: {place} ({dist}km, {depth}km) [TAP]` directly atop the radar view.
+  * **Shockwave Ripple Rings**: Renders expanding epicenter concentric wave rings on the flight radar screen if within current scope radius.
+  * **Flashing Footer Tab**: The bottom navigation tab **`QUAKE`** flashes vibrant red while an alert is active.
+* **Dedicated Seismology View (`QUAKE` tab)**:
+  * **Richter Magnitude Badge**: Dynamic severity color coding (Green for $M < 2.5$, Amber for $2.5 \le M < 4.0$, Red for $M \ge 4.0$).
+  * **Epicenter Telemetry**: Precise geographic place name, distance in km, compass bearing, focal depth, elapsed age in minutes, and P-wave / S-wave propagation status.
+  * **Simulated Seismogram Z-Trace**: Live mathematical waveform visualizer simulating primary P-wave arrival, secondary S-wave packet, and surface coda oscillations scaled proportionally to the tremor magnitude.
+  * **Regional Tremor Roster**: Scrollable index of the top 5 most recent regional events. Tapping anywhere forces an instant USGS refresh.
+
 ---
 
 ## Installation & Build
@@ -157,6 +175,7 @@ pio run -t upload --upload-port COM6
 3. **[Open-Meteo](https://open-meteo.com/)**: Global weather forecasts and meteorological observations.
 4. **[WhereTheISS.at](https://wheretheiss.at/)**: Real-time ISS orbital coordinates.
 5. **[The Space Devs / Launch Library 2](https://thespacedevs.com/llapi)**: Upcoming rocket launches and orbital schedules.
+6. **[USGS Earthquake Hazards Program](https://earthquake.usgs.gov/)**: Real-time FDSNWS seismic event telemetry and magnitudes.
 
 ---
 

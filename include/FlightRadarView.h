@@ -8,6 +8,7 @@ public:
   static void draw(float defaultRadiusKm = 100.0f);
   static void updateSweep(float defaultRadiusKm = 100.0f);
   static bool handleTouch(int tx, int ty);
+  static bool checkSeismicBannerTouch(int tx, int ty);
 
   static void cycleZoom();
   static void cycleFilter();

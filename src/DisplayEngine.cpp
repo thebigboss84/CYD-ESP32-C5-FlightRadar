@@ -1,4 +1,5 @@
 #include "DisplayEngine.h"
+#include "SeismicClient.h"
 #include <SPI.h>
 
 Arduino_DataBus *DisplayEngine::bus = nullptr;
@@ -148,9 +149,9 @@ void DisplayEngine::drawFooter(AppMode activeMode) {
   gfx->fillRect(0, SCREEN_H - FOOTER_H, SCREEN_W, FOOTER_H, COL_FOOTER_BG);
   gfx->drawFastHLine(0, SCREEN_H - FOOTER_H, SCREEN_W, COL_GRAY);
 
-  const char *tabs[] = { "RADAR", "LIST", "WX", "ISS", "SPACEX", "CITY" };
-  const int TAB_COUNT = 6;
-  const int tabW = SCREEN_W / TAB_COUNT; // 53px each
+  const char *tabs[] = { "RADAR", "LIST", "WX", "ISS", "SPACE", "CITY", "QUAKE" };
+  const int TAB_COUNT = 7;
+  const int tabW = SCREEN_W / TAB_COUNT; // 45px each
 
   for (int i = 0; i < TAB_COUNT; i++) {
     int x = i * tabW;
@@ -160,6 +161,10 @@ void DisplayEngine::drawFooter(AppMode activeMode) {
     if (isActive) {
       gfx->fillRect(x + 1, SCREEN_H - FOOTER_H + 2, w - 2, FOOTER_H - 4, COL_CYAN);
       gfx->setTextColor(COL_BLACK);
+    } else if (i == 6 && SeismicClient::hasActiveAlert()) {
+      // Highlight QUAKE tab in flashing RED when active seismic alert is present!
+      gfx->fillRect(x + 1, SCREEN_H - FOOTER_H + 2, w - 2, FOOTER_H - 4, 0xF800);
+      gfx->setTextColor(0xFFFF);
     } else {
       gfx->fillRect(x + 1, SCREEN_H - FOOTER_H + 2, w - 2, FOOTER_H - 4, COL_FOOTER_BG);
       gfx->setTextColor(COL_BTN_TEXT);

@@ -2,6 +2,8 @@
 #include <math.h>
 
 bool LedBeacon::emergencyActive  = false;
+bool LedBeacon::seismicAlert     = false;
+float LedBeacon::seismicMag      = 0.0f;
 bool LedBeacon::spaceXCountdown  = false;
 bool LedBeacon::spaceXLiftoff    = false;
 bool LedBeacon::issPassActive    = false;
@@ -22,6 +24,11 @@ void LedBeacon::writeColor(uint8_t r, uint8_t g, uint8_t b) {
 
 void LedBeacon::setEmergency(bool active) {
   emergencyActive = active;
+}
+
+void LedBeacon::setSeismicAlert(bool active, float mag) {
+  seismicAlert = active;
+  seismicMag   = mag;
 }
 
 void LedBeacon::setSpaceXState(bool countdown, bool liftoff) {
@@ -54,6 +61,18 @@ void LedBeacon::update() {
       } else {
         writeColor(0, 0, 0);
       }
+    }
+    return;
+  }
+
+  // 1b. Seismic Warning Alert (< 200 km, M >= 2.0 within last 90 min) - High-Intensity Warning Red Pulse
+  if (seismicAlert) {
+    if (now - lastTick >= 35) {
+      lastTick = now;
+      float phase = (float)(now % 650) / 650.0f * (float)M_PI * 2.0f;
+      float bright = 0.20f + 0.80f * ((sinf(phase) + 1.0f) * 0.5f);
+      uint8_t r = (uint8_t)(bright * 255.0f);
+      writeColor(r, 0, 0); // Pulsing Pure Warning Red
     }
     return;
   }

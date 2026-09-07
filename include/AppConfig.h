@@ -87,6 +87,7 @@ enum AppMode {
   MODE_ISS,
   MODE_SPACEX,
   MODE_CITY,
+  MODE_SEISMIC,
   MODE_COUNT
 };
 
@@ -187,6 +188,21 @@ struct GpsData {
   unsigned long last_fix_ms;
 };
 
+struct SeismicRecord {
+  bool    valid;
+  char    id[16];
+  float   mag;
+  char    place[48];
+  float   lat;
+  float   lon;
+  float   depth_km;
+  float   dist_km;
+  float   bearing;
+  int64_t epoch_ms;
+  int     age_min;
+  bool    is_alert; // Mag >= 2.0, dist <= 200km, age <= 90min
+};
+
 struct CityPreset {
   const char *name;
   float lat;
@@ -216,6 +232,7 @@ static const CityPreset CITY_PRESETS[] = {
 #define WEATHER_REFRESH_MS   (15UL * 60UL * 1000UL)    // 15 minutes
 #define ISS_REFRESH_MS       (10UL * 1000UL)           // 10 seconds
 #define SPACEX_REFRESH_MS    (30UL * 60UL * 1000UL)    // 30 minutes
+#define SEISMIC_REFRESH_MS   (2UL * 60UL * 1000UL)     // 2 minutes
 #define CLOCK_REFRESH_MS     (1000UL)                  // 1 second
 #define SWEEP_ANIM_MS        (80UL)                    // Paced radar sweep animation frame
 #define EXTRAPOLATE_MS       (2000UL)                  // Aircraft dead-reckoning movement interval

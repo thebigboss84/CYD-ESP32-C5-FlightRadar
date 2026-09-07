@@ -1,6 +1,7 @@
 #include "FlightRadarView.h"
 #include "DisplayEngine.h"
 #include "OpenSkyClient.h"
+#include "SeismicClient.h"
 #include "GpsManager.h"
 #include <math.h>
 
@@ -40,6 +41,17 @@ bool FlightRadarView::handleTouch(int tx, int ty) {
     }
     draw(currentRadiusKm);
     return true;
+  }
+  return false;
+}
+
+bool FlightRadarView::checkSeismicBannerTouch(int tx, int ty) {
+  if (SeismicClient::hasActiveAlert()) {
+    const FlightRecord *emg = OpenSkyClient::getEmergencyFlight();
+    int bannerY = emg ? (CONTENT_Y + 62) : (CONTENT_Y + 42);
+    if (tx >= 10 && tx <= SCREEN_W - 10 && ty >= bannerY && ty <= bannerY + 22) {
+      return true;
+    }
   }
   return false;
 }
@@ -169,15 +181,30 @@ void FlightRadarView::draw(float defaultRadiusKm) {
 
   // 5. Emergency Squawk Alert Banner (If Active)
   const FlightRecord *emg = OpenSkyClient::getEmergencyFlight();
+  int bannerY = CONTENT_Y + 42;
   if (emg) {
-    int emgY = CONTENT_Y + 42;
-    gfx->fillRoundRect(30, emgY, SCREEN_W - 60, 18, 4, 0xF800); // Bright Red Banner
-    gfx->drawRoundRect(30, emgY, SCREEN_W - 60, 18, 4, 0xFFFF);
+    gfx->fillRoundRect(20, bannerY, SCREEN_W - 40, 18, 4, 0xF800); // Bright Red Banner
+    gfx->drawRoundRect(20, bannerY, SCREEN_W - 40, 18, 4, 0xFFFF);
     gfx->setTextColor(0xFFFF);
     gfx->setTextSize(1);
-    gfx->setCursor(36, emgY + 5);
+    gfx->setCursor(26, bannerY + 5);
     gfx->printf("! EMERGENCY %s: %s (%.0fft)",
                 emg->squawk, emg->callsign, OpenSkyClient::metersToFeet(emg->alt_m));
+    bannerY += 20;
+  }
+
+  // 5b. Seismic Warning Alert Banner (If Active within 200km)
+  if (SeismicClient::hasActiveAlert()) {
+    const SeismicRecord &q = SeismicClient::getLatest();
+    if (q.valid) {
+      gfx->fillRoundRect(16, bannerY, SCREEN_W - 32, 18, 4, 0xC800); // Warning Crimson
+      gfx->drawRoundRect(16, bannerY, SCREEN_W - 32, 18, 4, 0xFD20); // Amber Border
+      gfx->setTextColor(0xFFFF);
+      gfx->setTextSize(1);
+      gfx->setCursor(22, bannerY + 5);
+      gfx->printf("! SEISMIC M%.1f: %s (%3.0fkm, %dm) [TAP]",
+                  q.mag, q.place, q.dist_km, q.age_min);
+    }
   }
 
   // 6. Draw Aircraft Targets
@@ -267,6 +294,24 @@ void FlightRadarView::draw(float defaultRadiusKm) {
       gfx->setTextColor(col);
       gfx->setCursor(tx + 1, ty);
       gfx->print(f->callsign);
+    }
+  }
+
+  // 7. Draw Seismic Epicenter Warning Ripples (if in range)
+  if (SeismicClient::hasActiveAlert()) {
+    const SeismicRecord &q = SeismicClient::getLatest();
+    if (q.valid && q.dist_km <= radiusKm) {
+      float qBngRad = q.bearing * (float)M_PI / 180.0f;
+      int qx = cx + (int)(sinf(qBngRad) * q.dist_km * scale);
+      int qy = cy - (int)(cosf(qBngRad) * q.dist_km * scale);
+      int qdx = qx - cx;
+      int qdy = qy - cy;
+      if ((qdx * qdx + qdy * qdy) <= (r - 2) * (r - 2)) {
+        gfx->drawCircle(qx, qy, 4, 0xF800);  // Inner Red
+        gfx->drawCircle(qx, qy, 8, 0xFD20);  // Middle Orange
+        gfx->drawCircle(qx, qy, 12, 0xFFE0); // Outer Yellow
+        gfx->fillCircle(qx, qy, 2, COL_WHITE);
+      }
     }
   }
 

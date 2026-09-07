@@ -17,6 +17,8 @@
 #include "SpaceXView.h"
 #include "LedBeacon.h"
 #include "CitySelectView.h"
+#include "SeismicClient.h"
+#include "SeismicView.h"
 
 static AppMode currentMode = MODE_RADAR;
 
@@ -24,6 +26,7 @@ static unsigned long lastOpenSkyFetch     = 0;
 static unsigned long lastWeatherFetch     = 0;
 static unsigned long lastIssFetch         = 0;
 static unsigned long lastSpaceXFetch      = 0;
+static unsigned long lastSeismicFetch     = 0;
 static unsigned long lastClockTick        = 0;
 static unsigned long lastSweepTick        = 0;
 static unsigned long lastCountdownTick    = 0;
@@ -84,6 +87,9 @@ static void redrawCurrentView() {
     case MODE_CITY:
       CitySelectView::draw();
       break;
+    case MODE_SEISMIC:
+      SeismicView::draw();
+      break;
     default:
       break;
   }
@@ -102,11 +108,13 @@ static void fetchCityData() {
   WeatherClient::fetch(lat, lon);
   IssClient::fetch(lat, lon);
   SpaceXClient::fetch(lat, lon);
+  SeismicClient::fetch(lat, lon);
 
   lastOpenSkyFetch = millis();
   lastWeatherFetch = millis();
   lastIssFetch     = millis();
   lastSpaceXFetch  = millis();
+  lastSeismicFetch = millis();
 
   redrawCurrentView();
 }
@@ -243,10 +251,10 @@ void loop() {
     }
     // Footer Navigation Bar Touches (Y: SCREEN_H - FOOTER_H..SCREEN_H)
     else if (ty >= SCREEN_H - FOOTER_H) {
-      int tabW = SCREEN_W / 6;
+      int tabW = SCREEN_W / MODE_COUNT;
       int tabIdx = tx / tabW;
 
-      if (tabIdx >= 0 && tabIdx < 6) {
+      if (tabIdx >= 0 && tabIdx < MODE_COUNT) {
         if (currentMode != (AppMode)tabIdx) {
           currentMode = (AppMode)tabIdx;
           FlightListView::clearDetail();
@@ -259,9 +267,18 @@ void loop() {
       if (currentMode == MODE_FLIGHT_LIST) {
         FlightListView::handleTouch(tx, ty);
       } else if (currentMode == MODE_RADAR) {
-        FlightRadarView::handleTouch(tx, ty);
+        if (FlightRadarView::checkSeismicBannerTouch(tx, ty)) {
+          currentMode = MODE_SEISMIC;
+          redrawCurrentView();
+        } else {
+          FlightRadarView::handleTouch(tx, ty);
+        }
       } else if (currentMode == MODE_CITY) {
         if (CitySelectView::handleTouch(tx, ty)) {
+          fetchCityData();
+        }
+      } else if (currentMode == MODE_SEISMIC) {
+        if (SeismicView::handleTouch(tx, ty)) {
           fetchCityData();
         }
       }
@@ -301,6 +318,14 @@ void loop() {
         redrawCurrentView();
       }
     }
+
+    if (now - lastSeismicFetch >= SEISMIC_REFRESH_MS) {
+      lastSeismicFetch = now;
+      SeismicClient::fetch(getActiveLat(), getActiveLon());
+      if (currentMode == MODE_SEISMIC || (currentMode == MODE_RADAR && SeismicClient::hasActiveAlert())) {
+        redrawCurrentView();
+      }
+    }
   }
 
   // 5. Radar Display Animations & Dead Reckoning
@@ -334,6 +359,7 @@ void loop() {
   // 7. WS2812 Aerospace RGB Beacon Updates
   LedBeacon::setEmergency(OpenSkyClient::hasActiveEmergency());
   LedBeacon::setAircraftOverhead(OpenSkyClient::hasAircraftOverhead(6.0f));
+  LedBeacon::setSeismicAlert(SeismicClient::hasActiveAlert(), SeismicClient::getLatest().mag);
 
   const SpaceXRecord &sp = SpaceXClient::getData();
   if (sp.valid && sp.visible_in_sky && sp.launch_epoch_utc > 0) {
