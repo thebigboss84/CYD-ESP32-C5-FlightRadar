@@ -1,12 +1,13 @@
 // ============================================================================
 // CYD ESP32-C5 FlightRadar & Aerospace Instrument - 3D Printable Enclosure
 // Compatible with: RockBase NM-CYD-C5 (ESP32-C5 2.8" TFT Touch) + GY-GPS6MV2
+// Features Dedicated Internal Compartments for BOTH GPS Receiver & Patch Antenna!
 // Designed for 3D Printing: FDM (PLA/PETG/ABS) or Resin (SLA)
 // ============================================================================
 
 /* [Model View Selection] */
-// What to display
-part_to_show = "assembly"; // [assembly:Full Assembly, exploded:Exploded View, bezel:Front Bezel Only, rear:Rear Enclosure Only, stand:Desk Stand Only]
+// Select which component to preview or render
+part_to_show = "rear_backpack"; // [assembly:Full Assembly, bezel:Standard Front Bezel, rear_backpack:Rear Enclosure with GPS Backpack, stand:Desk Stand 25deg, bezel_toppod:Top-Pod Bezel, rear_toppod:Top-Pod Rear Enclosure]
 
 /* [Print & Fit Tolerances] */
 nozzle_dia      = 0.4;  // Nozzle diameter (mm)
@@ -34,7 +35,7 @@ boss_pilot_d    = 2.8;  // Standoff pilot hole for self-tapping M3
 disp_view_w     = 61.0; // Viewable LCD window width (mm)
 disp_view_h     = 44.0; // Viewable LCD window height (mm)
 disp_glass_w    = 69.5; // Glass panel outer width (mm)
-disp_glass_h    = 50.0; // Glass panel outer height (mm)
+disp_glass_h    = 49.5; // Glass panel outer height (mm)
 disp_recess_d   = 1.8;  // Glass panel recess depth (mm)
 
 /* [WS2812 Indicator Beacon] */
@@ -43,18 +44,25 @@ led_y           = 22.5; // LED Y offset from center (mm)
 led_aperture_d  = 3.2;  // Outer light port diameter (mm)
 led_cone_d      = 5.0;  // Inner light funnel diameter (mm)
 
-/* [GY-GPS6MV2 Module Chamber] */
-gps_w           = 26.5; // Module bay width (mm)
-gps_h           = 36.5; // Module bay length (mm)
-gps_d           = 9.0;  // Depth for module + ceramic patch antenna (mm)
+/* [GY-GPS6MV2 Receiver & Ceramic Antenna Chambers] */
+gps_rx_w        = 26.5; // Receiver module bay width (mm)
+gps_rx_h        = 36.5; // Receiver module bay length (mm)
+gps_ant_w       = 26.0; // Ceramic antenna pocket width (mm)
+gps_ant_h       = 26.0; // Ceramic antenna pocket length (mm)
+gps_ant_d       = 9.0;  // Ceramic antenna pocket depth (mm)
+
+/* [GPS Backpack Dimensions] */
+bp_w            = 64.0; // Backpack outer width (mm)
+bp_h            = 44.0; // Backpack outer height (mm)
+bp_d            = 14.0; // Backpack depth extending behind shell (mm)
 
 /* [Desk Stand Angle] */
 stand_tilt_deg  = 25.0; // Desktop viewing tilt angle (degrees)
 
 // Calculated bounding parameters
-outer_w         = pcb_w + (wall_t * 2) + (clearance * 2); // ~91.8 mm
-outer_h         = pcb_h + (wall_t * 2) + (clearance * 2); // ~55.8 mm
-rear_depth      = 18.0; // Enclosure depth (mm)
+outer_w         = pcb_w + (wall_t * 2) + (clearance * 2); // 91.8 -> 93.0 mm
+outer_h         = pcb_h + (wall_t * 2) + (clearance * 2); // 55.8 -> 57.0 mm
+rear_depth      = 19.0; // Main enclosure depth (mm)
 
 $fn = 40; // Circle facet resolution
 
@@ -62,19 +70,21 @@ $fn = 40; // Circle facet resolution
 // TOP-LEVEL SELECTION
 // ============================================================================
 if (part_to_show == "assembly") {
-    assembly_view(exploded = false);
-} else if (part_to_show == "exploded") {
-    assembly_view(exploded = true);
+    assembly_view();
 } else if (part_to_show == "bezel") {
     front_bezel();
-} else if (part_to_show == "rear") {
-    rear_enclosure();
+} else if (part_to_show == "rear_backpack") {
+    rear_enclosure_backpack();
 } else if (part_to_show == "stand") {
     desk_stand_25deg();
+} else if (part_to_show == "bezel_toppod") {
+    front_bezel_toppod();
+} else if (part_to_show == "rear_toppod") {
+    rear_enclosure_toppod();
 }
 
 // ============================================================================
-// MODULE: FRONT BEZEL
+// MODULE: FRONT BEZEL (Standard 93x57mm)
 // ============================================================================
 module front_bezel() {
     difference() {
@@ -90,7 +100,6 @@ module front_bezel() {
 
         // 1. LCD Active Display Aperture (with 45° touch bevel)
         translate([0, 0, -0.1]) {
-            // Straight through window
             cube([disp_view_w, disp_view_h, bezel_t + 0.2], center = true);
         }
         // Chamfered bezel edge for smooth finger touch swipe
@@ -107,7 +116,7 @@ module front_bezel() {
             cube([disp_glass_w, disp_glass_h, disp_recess_d + 0.1], center = true);
         }
 
-        // 3. WS2812 Beacon Light Guide (Conical Light Aperture)
+        // 3. WS2812 Beacon Light Guide
         translate([led_x, led_y, -0.1]) {
             cylinder(d1 = led_cone_d, d2 = led_aperture_d, h = bezel_t + 0.2);
         }
@@ -116,9 +125,7 @@ module front_bezel() {
         for (x = [-screw_dist_x/2, screw_dist_x/2]) {
             for (y = [-screw_dist_y/2, screw_dist_y/2]) {
                 translate([x, y, -0.1]) {
-                    // Screw shank through hole
                     cylinder(d = screw_hole_d, h = bezel_t + 0.2);
-                    // Screw head counterbore recess
                     translate([0, 0, bezel_t - screw_head_h + 0.1])
                         cylinder(d = screw_head_d, h = screw_head_h + 0.2);
                 }
@@ -128,9 +135,9 @@ module front_bezel() {
 }
 
 // ============================================================================
-// MODULE: REAR ENCLOSURE
+// MODULE: REAR ENCLOSURE (With Integrated GPS Backpack & Antenna Tray)
 // ============================================================================
-module rear_enclosure() {
+module rear_enclosure_backpack() {
     difference() {
         union() {
             // Main Outer Rounded Body
@@ -143,6 +150,18 @@ module rear_enclosure() {
                 }
             }
 
+            // GPS Backpack Outer Extension (Extending backwards)
+            translate([-bp_w/2, -16.0, -bp_d]) {
+                hull() {
+                    for (x = [3, bp_w - 3]) {
+                        for (y = [3, bp_h - 3]) {
+                            translate([x, y, 0])
+                                cylinder(r = 3, h = bp_d + 1);
+                        }
+                    }
+                }
+            }
+
             // Standoff Bosses for PCB Mounting
             for (x = [-screw_dist_x/2, screw_dist_x/2]) {
                 for (y = [-screw_dist_y/2, screw_dist_y/2]) {
@@ -151,12 +170,19 @@ module rear_enclosure() {
                 }
             }
 
-            // GPS Module Internal Retention Brackets
-            translate([0, 5, floor_t]) {
-                // Bracket walls holding GY-GPS6MV2
+            // Internal Antenna Retention Lips
+            translate([15.0, 13.0, -bp_d + 2.0]) {
                 difference() {
-                    cube([gps_w + 3.0, gps_h + 3.0, gps_d], center = true);
-                    cube([gps_w, gps_h, gps_d + 0.2], center = true);
+                    cube([gps_ant_w + 3.0, gps_ant_h + 3.0, gps_ant_d], center = true);
+                    cube([gps_ant_w, gps_ant_h, gps_ant_d + 1], center = true);
+                }
+            }
+
+            // Internal GPS Receiver Board Rails
+            translate([-16.0, 5.0, -bp_d + 2.0]) {
+                difference() {
+                    cube([gps_rx_w + 3.0, gps_rx_h + 3.0, 7.0], center = true);
+                    cube([gps_rx_w, gps_rx_h, 8.0], center = true);
                 }
             }
         }
@@ -173,7 +199,12 @@ module rear_enclosure() {
             }
         }
 
-        // 2. M3 Screw Pilot Holes in Standoff Bosses
+        // 2. Hollow GPS Backpack Cavity
+        translate([0, 6.0, -bp_d + 2.0]) {
+            cube([bp_w - 4.4, bp_h - 4.4, bp_d + 2.0], center = true);
+        }
+
+        // 3. M3 Screw Pilot Holes in Standoff Bosses
         for (x = [-screw_dist_x/2, screw_dist_x/2]) {
             for (y = [-screw_dist_y/2, screw_dist_y/2]) {
                 translate([x, y, floor_t - 0.5])
@@ -181,7 +212,7 @@ module rear_enclosure() {
             }
         }
 
-        // 3. USB-C Power Connector Cutout (Left Side Wall)
+        // 4. USB-C Power Connector Cutout (Left Side Wall)
         translate([-outer_w/2, 0, floor_t + standoff_h + pcb_t/2 + 3]) {
             hull() {
                 translate([0, -5, 0]) rotate([0, 90, 0]) cylinder(d = 6.5, h = wall_t * 2, center = true);
@@ -189,27 +220,21 @@ module rear_enclosure() {
             }
         }
 
-        // 4. MicroSD Card Access Slot (Right Side Wall)
+        // 5. MicroSD Card Access Slot (Right Side Wall)
         translate([outer_w/2, -4, floor_t + standoff_h + pcb_t + 1]) {
             cube([wall_t * 2, 13.0, 3.2], center = true);
         }
 
-        // 5. Hardware BOOT / RESET Pinhole Access
-        translate([0, -18, -0.1])
-            cylinder(d = 2.5, h = floor_t + 0.2); // BOOT Button
-        translate([-20, -18, -0.1])
-            cylinder(d = 2.5, h = floor_t + 0.2); // RESET Button
-
-        // 6. Tactical Airflow Cooling Louvers (Rear Backplate)
-        for (i = [-2 : 2]) {
-            translate([i * 12, -8, -0.1]) {
-                cube([2.2, 22.0, floor_t + 0.2], center = true);
-            }
+        // 6. Direct Wire Routing Aperture from GPS to P5 LP-UART Header
+        translate([-14.0, 19.0, -2.0]) {
+            cube([16.0, 10.0, floor_t + 4.0], center = true);
         }
 
-        // 7. GPS Wiring Passthrough Channel
-        translate([0, -15, floor_t + 1]) {
-            cube([10.0, 6.0, 4.0], center = true);
+        // 7. Tactical Airflow Cooling Louvers on Backpack Base
+        for (i = [-1 : 1]) {
+            translate([i * 12, -6, -bp_d - 0.1]) {
+                cube([2.2, 16.0, 3.0], center = true);
+            }
         }
     }
 }
@@ -218,95 +243,137 @@ module rear_enclosure() {
 // MODULE: DESKTOP STAND (25-DEGREE ERGONOMIC CRADLE)
 // ============================================================================
 module desk_stand_25deg() {
-    stand_w = 74.0;
-    stand_d = 65.0;
-    stand_h = 28.0;
+    stand_w = 78.0;
+    stand_d = 72.0;
+    stand_h = 32.0;
 
     difference() {
-        // Main Wedge Body
+        // Main Base Block
         translate([-stand_w/2, -stand_d/2, 0]) {
             cube([stand_w, stand_d, stand_h]);
         }
 
         // 25-Degree Tilted Enclosure Resting Cradle Pocket
-        translate([0, 8, 12]) {
+        translate([0, 10, 14]) {
             rotate([stand_tilt_deg, 0, 0]) {
-                // Receptive pocket for rear enclosure
-                cube([outer_w + 1.2, outer_h + 1.2, 35.0], center = true);
+                cube([outer_w + 1.4, outer_h + 1.4, 40.0], center = true);
             }
         }
 
-        // Angled Top Slice
-        translate([0, -stand_d/2, stand_h + 10]) {
-            rotate([stand_tilt_deg - 5, 0, 0])
-                cube([stand_w + 10, stand_d * 2, 20], center = true);
+        // Central Clearance Recess for GPS Backpack
+        translate([0, -2, stand_h/2]) {
+            cube([bp_w + 2.0, stand_d, stand_h + 2], center = true);
         }
 
         // Rear USB-C Cable Route Arch
         translate([0, -stand_d/2 + 10, -0.1]) {
-            cylinder(d = 14.0, h = stand_h + 1);
-            translate([-7, -15, 0])
-                cube([14.0, 20.0, stand_h + 1]);
+            cylinder(d = 16.0, h = stand_h + 1);
+            translate([-8, -15, 0])
+                cube([16.0, 20.0, stand_h + 1]);
         }
 
-        // Under-Desk Anti-Slip Rubber Bumper Pockets (4 Corners)
-        for (x = [-stand_w/2 + 8, stand_w/2 - 8]) {
-            for (y = [-stand_d/2 + 8, stand_d/2 - 8]) {
-                translate([x, y, -0.1])
-                    cylinder(d = 8.5, h = 1.6);
+        // Underside Rubber Foot Sockets
+        for (fx = [-stand_w/2 + 8, stand_w/2 - 8]) {
+            for (fy = [-stand_d/2 + 8, stand_d/2 - 8]) {
+                translate([fx, fy, -0.1])
+                    cylinder(d = 8.5, h = 1.8);
             }
         }
     }
 }
 
 // ============================================================================
-// MODULE: ASSEMBLY VIEW
+// MODULE: TACTICAL AVIONICS TOP-POD BEZEL (93x82mm with Radome Brow)
 // ============================================================================
-module assembly_view(exploded = false) {
-    bezel_z = exploded ? 40 : rear_depth;
-    pcb_z   = exploded ? 20 : floor_t + standoff_h;
-    gps_z   = exploded ? 10 : floor_t + 2;
-    stand_z = exploded ? -30 : -10;
-
-    // 1. Rear Enclosure (Dark Gunmetal Tactical Shell)
-    color([0.18, 0.20, 0.22, 1.0])
-        rear_enclosure();
-
-    // 2. GY-GPS6MV2 Module (Blue PCB + Golden Ceramic Antenna)
-    translate([0, 5, gps_z + 4]) {
-        color([0.1, 0.3, 0.8, 0.9])
-            cube([25.0, 35.0, 1.6], center = true);
-        translate([0, 0, 3.5])
-            color([0.85, 0.70, 0.25, 1.0])
-                cube([25.0, 25.0, 4.0], center = true); // Ceramic Patch Antenna
+module front_bezel_toppod() {
+    top_h = 82.0;
+    difference() {
+        hull() {
+            for (x = [-outer_w/2 + 4, outer_w/2 - 4]) {
+                for (y = [-top_h/2 + 4, top_h/2 - 4]) {
+                    translate([x, y, 0]) cylinder(r = 4, h = bezel_t);
+                }
+            }
+        }
+        // LCD window centered in lower 57mm
+        translate([0, -12.5, -0.1]) cube([disp_view_w, disp_view_h, bezel_t + 0.2], center = true);
+        translate([0, -12.5, -0.1]) cube([disp_glass_w, disp_glass_h, disp_recess_d + 0.1], center = true);
+        translate([led_x, -12.5 + 22.5, -0.1]) cylinder(d1 = 5.0, d2 = 3.2, h = bezel_t + 0.2);
+        for (x = [-screw_dist_x/2, screw_dist_x/2]) {
+            for (y = [-12.5 - screw_dist_y/2, -12.5 + screw_dist_y/2]) {
+                translate([x, y, -0.1]) {
+                    cylinder(d = 3.2, h = bezel_t + 0.2);
+                    translate([0, 0, bezel_t - 2.0]) cylinder(d = 6.0, h = 2.2);
+                }
+            }
+        }
     }
+}
 
-    // 3. NM-CYD-C5 Board (Green PCB with 2.8" LCD Screen)
-    translate([0, 0, pcb_z]) {
-        // PCB Base
-        color([0.1, 0.5, 0.2, 0.9])
-            cube([pcb_w, pcb_h, pcb_t], center = true);
-        // LCD Module Glass
-        translate([0, 0, 2.5])
-            color([0.05, 0.1, 0.2, 0.95])
-                cube([disp_glass_w, disp_glass_h, 2.8], center = true);
-        // Active Screen Illuminated Image
-        translate([0, 0, 4.0])
-            color([0.0, 0.7, 0.9, 0.9])
-                cube([disp_view_w, disp_view_h, 0.2], center = true);
-        // WS2812 RGB LED Indicator
-        translate([led_x, led_y, 1.5])
-            color([0.0, 1.0, 0.8, 1.0])
-                cylinder(d = 2.5, h = 1.0, center = true);
+// ============================================================================
+// MODULE: TACTICAL AVIONICS TOP-POD REAR ENCLOSURE
+// ============================================================================
+module rear_enclosure_toppod() {
+    top_h = 82.0;
+    difference() {
+        union() {
+            hull() {
+                for (x = [-outer_w/2 + 4, outer_w/2 - 4]) {
+                    for (y = [-top_h/2 + 4, top_h/2 - 4]) {
+                        translate([x, y, 0]) cylinder(r = 4, h = 20.0);
+                    }
+                }
+            }
+            // Standoffs for lower PCB
+            for (x = [-screw_dist_x/2, screw_dist_x/2]) {
+                for (y = [-12.5 - screw_dist_y/2, -12.5 + screw_dist_y/2]) {
+                    translate([x, y, floor_t]) cylinder(d = boss_d, h = standoff_h);
+                }
+            }
+            // Top antenna tray
+            translate([15.0, 24.0, floor_t]) {
+                difference() {
+                    cube([gps_ant_w + 3.0, gps_ant_h + 3.0, gps_ant_d], center = true);
+                    cube([gps_ant_w, gps_ant_h, gps_ant_d + 1], center = true);
+                }
+            }
+            // Top receiver PCB slot
+            translate([-16.0, 24.0, floor_t]) {
+                difference() {
+                    cube([gps_rx_w + 3.0, gps_rx_h + 3.0, 8.0], center = true);
+                    cube([gps_rx_w, gps_rx_h, 9.0], center = true);
+                }
+            }
+        }
+        // Hollow main cavity
+        translate([0, 0, floor_t]) {
+            hull() {
+                for (x = [-outer_w/2 + 3, outer_w/2 - 3]) {
+                    for (y = [-top_h/2 + 3, top_h/2 - 3]) {
+                        translate([x, y, 0]) cylinder(r = 2, h = 22.0);
+                    }
+                }
+            }
+        }
+        // Ports & screw holes
+        for (x = [-screw_dist_x/2, screw_dist_x/2]) {
+            for (y = [-12.5 - screw_dist_y/2, -12.5 + screw_dist_y/2]) {
+                translate([x, y, floor_t - 0.5]) cylinder(d = boss_pilot_d, h = standoff_h + 1.0);
+            }
+        }
+        // USB-C on left wall
+        translate([-outer_w/2, -12.5, floor_t + standoff_h + pcb_t/2 + 3])
+            cube([wall_t * 2, 13.0, 7.0], center = true);
     }
+}
 
-    // 4. Front Bezel Faceplate (Tactical Matte Carbon / Dark Slate)
-    translate([0, 0, bezel_z])
-        color([0.28, 0.30, 0.34, 0.95])
+// ============================================================================
+// ASSEMBLY VIEW HELPER
+// ============================================================================
+module assembly_view() {
+    color([0.2, 0.2, 0.25, 0.9])
+        rear_enclosure_backpack();
+    color([0.3, 0.3, 0.35, 0.8])
+        translate([0, 0, rear_depth + 4])
             front_bezel();
-
-    // 5. Desktop Angled Cradle Stand
-    translate([0, -8, stand_z])
-        color([0.12, 0.14, 0.16, 0.95])
-            desk_stand_25deg();
 }

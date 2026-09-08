@@ -118,11 +118,17 @@ Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
 
 ### 10. 3D Printable Tactical Desktop Enclosure
 * **Turnkey 3D Printing Files in [`/enclosure`](enclosure/)**:
-  * **`AeroRadar_Front_Bezel.stl`**: Precision faceplate with recessed LCD window, 45° touch-swipe chamfer, WS2812 LED indicator aperture, and M3 counterbored screw recesses.
-  * **`AeroRadar_Rear_Enclosure.stl`**: Main chassis featuring internal PCB standoffs, a dedicated upward-facing cradle for the **GY-GPS6MV2 module & ceramic antenna**, USB-C port cutout, and thermal airflow ventilation louvers.
-  * **`AeroRadar_Desk_Stand_25deg.stl`**: Ergonomic 25° viewing angle desk cradle with rear USB-C cable management tunnel.
-  * **`AeroRadar_CYD_C5.scad`**: Parametric OpenSCAD CAD source file for customized tolerances.
-* See the complete [**3D Printing & Assembly Guide**](enclosure/3D_PRINTING_GUIDE.md) for recommended slicer settings, orientation, hardware BOM, and step-by-step wiring instructions.
+  * **Style A (Rear GPS Backpack - Recommended)**:
+    * **`AeroRadar_Front_Bezel.stl`**: Standard front faceplate ($93\times 57\text{ mm}$) with recessed LCD window, 45° touch-swipe chamfer, WS2812 LED indicator aperture, and M3 counterbored screw recesses.
+    * **`AeroRadar_Rear_Enclosure.stl`**: Main chassis featuring internal PCB standoffs, an integrated **dual-bay rear backpack ($64\times 44\times 14\text{ mm}$)** housing both the **GY-GPS6MV2 receiver board** and the **ceramic patch antenna** facing skyward, USB-C cutout, and cooling vents.
+  * **Style B (Tactical Cockpit Top Radome)**:
+    * **`AeroRadar_Front_Bezel_TopPod.stl`**: Expanded front faceplate ($93\times 82\text{ mm}$) with an integrated cockpit sun-visor brow.
+    * **`AeroRadar_Rear_Enclosure_TopPod.stl`**: Monolithic chassis featuring an apex skyward antenna radome and vertical receiver board bay.
+  * **Universal Stand & CAD**:
+    * **`AeroRadar_Desk_Stand_25deg.stl`**: Universal 25° viewing angle desk cradle with rear USB-C cable management tunnel and backpack clearance recess.
+    * **`AeroRadar_CYD_C5.scad`**: Parametric OpenSCAD CAD source file for customized tolerances.
+    * **`generate_stl.py`**: Standalone Python script to regenerate all binary STL models.
+* See the comprehensive [**3D Printing & Assembly Guide**](enclosure/3D_PRINTING_GUIDE.md) for recommended slicer settings, orientation, hardware BOM, and step-by-step wiring instructions.
 
 ### 11. USGS Real-Time Seismic Observatory & Earthquake Warning System
 * **Live USGS FDSNWS GeoJSON Feeds**: Queries the United States Geological Survey real-time earthquake database within a **200 km radius** of your active GPS location or selected city.
