@@ -16,27 +16,28 @@ wall_t          = 2.4;  // Enclosure wall thickness (mm)
 floor_t         = 2.0;  // Rear enclosure floor thickness (mm)
 bezel_t         = 4.0;  // Front bezel thickness (mm)
 
-/* [Hardware Dimensions] */
-pcb_w           = 86.0; // NM-CYD-C5 PCB width (mm)
-pcb_h           = 50.0; // NM-CYD-C5 PCB height (mm)
-pcb_t           = 1.6;  // PCB thickness (mm)
-standoff_h      = 6.0;  // Standoff height off rear wall (mm)
+/* [Hardware Dimensions - Exact RockBase NM-CYD-C5 Specifications] */
+pcb_w           = 86.01; // NM-CYD-C5 PCB width (mm, from EasyEDA 3D STEP)
+pcb_h           = 60.0;  // NM-CYD-C5 PCB height (mm, 59.98mm actual)
+pcb_t           = 1.6;   // PCB thickness (mm)
+standoff_h      = 11.0;  // Standoff height off rear floor for 11mm basement (mm)
 
-// Corner Mounting Holes (M3 / 81mm x 45mm spacing)
-screw_dist_x    = 81.0; 
-screw_dist_y    = 45.0;
-screw_hole_d    = 3.2;  // M3 clearance hole
-screw_head_d    = 6.0;  // M3 socket head diameter
-screw_head_h    = 2.2;  // M3 counterbore depth
-boss_d          = 7.0;  // Standoff boss outer diameter
-boss_pilot_d    = 2.8;  // Standoff pilot hole for self-tapping M3
+// Corner Mounting Holes (M3 / 78.0mm x 42.0mm spacing, symmetric in X, offset in Y)
+screw_dist_x    = 78.0;  // Hole center spacing X (4.0mm to 82.0mm)
+screw_dist_y    = 42.0;  // Hole center spacing Y (14.0mm to 56.0mm)
+screw_hole_d    = 3.4;   // M3 clearance hole (mm)
+screw_head_d    = 6.2;   // M3 socket head counterbore diameter (mm)
+screw_head_h    = 2.0;   // M3 counterbore depth (mm)
+boss_d          = 7.0;   // Standoff boss outer diameter (mm)
+boss_pilot_d    = 2.8;   // Standoff pilot hole for self-tapping M3 (mm)
 
-/* [Display Cutout] */
-disp_view_w     = 61.0; // Viewable LCD window width (mm)
-disp_view_h     = 44.0; // Viewable LCD window height (mm)
-disp_glass_w    = 69.5; // Glass panel outer width (mm)
-disp_glass_h    = 49.5; // Glass panel outer height (mm)
-disp_recess_d   = 1.8;  // Glass panel recess depth (mm)
+/* [Display Cutout - Centered with LCD Glass & Screen at Y = +5.0mm] */
+disp_center_y   = 5.0;   // Screen center offset in Y from PCB center
+disp_view_w     = 62.0;  // Viewable LCD window width (mm)
+disp_view_h     = 44.0;  // Viewable LCD window height (mm)
+disp_glass_w    = 69.0;  // Glass panel outer width (mm)
+disp_glass_h    = 50.0;  // Glass panel outer height (mm)
+disp_recess_d   = 2.0;   // Glass panel recess depth (mm)
 
 /* [WS2812 Indicator Beacon] */
 led_x           = -28.0;// LED X offset from center (mm)
