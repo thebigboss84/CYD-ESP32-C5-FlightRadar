@@ -1,6 +1,5 @@
 import numpy as np
 import struct
-import math
 import os
 from collections import defaultdict
 
@@ -56,13 +55,14 @@ def verify_manifold(name, triangles):
     non_man = sum(1 for c in edge_counts.values() if c > 2)
     bad_orient = sum(1 for (vA, vB), c in directed_edges.items() if directed_edges.get((vB, vA), 0) != c)
     status = "OK (100% Watertight Manifold)" if (boundaries == 0 and non_man == 0 and bad_orient == 0) else "ERROR"
-    print(f"[{status}] {name:30}: Triangles={len(triangles):5}, Boundaries={boundaries}, Non-Manifold={non_man}, BadOrient={bad_orient}")
+    print(f"[{status}] {name:34}: Triangles={len(triangles):5}, Boundaries={boundaries}, Non-Manifold={non_man}, BadOrient={bad_orient}")
     return boundaries == 0 and non_man == 0 and bad_orient == 0
 
 class RectGridMesh:
     """
     Rectilinear cellular B-Rep generator.
     Guarantees 100% 2-manifold closed watertight surfaces with:
+    - Dedicated corner M3 standoff bosses & screw holes
     - Zero internal faces
     - Zero boundary open holes
     - 100% consistent outward normals (No red error surfaces in Cura)
@@ -138,15 +138,15 @@ class RectGridMesh:
         return tri
 
 # ============================================================================
-# 1. FRONT BEZEL (Standard 93x57mm)
+# 1. FRONT BEZEL (Standard 93x57mm with M3 Counterbore Screw Holes)
 # ============================================================================
 def generate_front_bezel(out_dir):
-    xs = [-46.5, -42.1, -38.9, -34.75, -30.5, -29.5, -26.5, 30.5, 34.75, 38.9, 42.1, 46.5]
-    ys = [-28.5, -24.75, -24.1, -22.0, -20.9, 20.9, 21.0, 22.0, 24.0, 24.1, 24.75, 28.5]
-    zs = [0.0, 1.8, 2.2, 4.0]
+    xs = [-46.5, -43.5, -40.5-1.6, -40.5+1.6, -37.5, -34.75, -30.5, -29.5, -26.5, 30.5, 34.75, 37.5, 40.5-1.6, 40.5+1.6, 43.5, 46.5]
+    ys = [-28.5, -25.5, -22.5-1.6, -22.5+1.6, -19.5, -22.0, 19.5, 21.0, 22.0, 22.5-1.6, 22.5+1.6, 24.0, 24.75, 25.5, 28.5]
+    zs = [0.0, 1.8, 2.0, 4.0]
     
     g = RectGridMesh(xs, ys, zs)
-    # Outer solid plate
+    # Outer solid plate (Z = 0.0 to 4.0)
     g.set_box(-46.5, 46.5, -28.5, 28.5, 0.0, 4.0, True)
     # LCD Glass pocket recess (Z = 0.0 to 1.8)
     g.set_box(-34.75, 34.75, -24.75, 24.75, 0.0, 1.8, False)
@@ -154,10 +154,13 @@ def generate_front_bezel(out_dir):
     g.set_box(-30.5, 30.5, -22.0, 22.0, 1.8, 4.0, False)
     # WS2812 Light guide aperture (X = -28.0, Y = 22.5)
     g.set_box(-29.5, -26.5, 21.0, 24.0, 0.0, 4.0, False)
-    # 4 Corner M3 Screw Holes & Counterbores (81mm x 45mm spacing)
+    # 4 Corner M3 Counterbored Screw Holes (81mm x 45mm spacing)
     for sx in [-40.5, 40.5]:
         for sy in [-22.5, 22.5]:
+            # M3 screw shank through-hole (3.2mm)
             g.set_box(sx - 1.6, sx + 1.6, sy - 1.6, sy + 1.6, 0.0, 4.0, False)
+            # M3 screw head counterbore recess (6.0mm socket head, 2.0mm deep)
+            g.set_box(sx - 3.0, sx + 3.0, sy - 3.0, sy + 3.0, 2.0, 4.0, False)
             
     tri = g.generate_triangles()
     verify_manifold("AeroRadar_Front_Bezel.stl", tri)
@@ -165,12 +168,12 @@ def generate_front_bezel(out_dir):
     write_binary_stl(path, tri, "Front_Bezel")
 
 # ============================================================================
-# 2. REAR ENCLOSURE (With Dedicated GPS Module & Antenna Backpack)
+# 2. REAR ENCLOSURE (With Corner Standoff Bosses + GPS Backpack)
 # ============================================================================
 def generate_rear_enclosure(out_dir):
-    xs = [-46.5, -44.1, -44.0, -41.9, -39.1, -32.0, -29.6, -28.5, -22.0, -8.0, -1.5, 0.0, 1.0, 27.5, 29.6, 32.0, 39.1, 41.9, 44.0, 44.1, 46.5]
-    ys = [-28.5, -26.1, -23.9, -21.1, -16.0, -13.6, -12.5, -7.0, -6.5, 6.5, 7.0, 14.0, 21.1, 23.9, 24.0, 24.5, 25.6, 26.0, 26.1, 28.0, 28.5]
-    zs = [-14.0, -11.6, -9.6, -2.6, 0.0, 2.0, 3.0, 6.0, 8.0, 11.5, 13.0, 19.0]
+    xs = [-46.5, -44.1, -40.5-3.5, -40.5-1.4, -40.5+1.4, -40.5+3.5, -32.0, -29.6, -22.0, -8.0, -1.0, 1.0, 27.5, 29.6, 32.0, 40.5-3.5, 40.5-1.4, 40.5+1.4, 40.5+3.5, 44.1, 46.5]
+    ys = [-28.5, -26.1, -22.5-3.5, -22.5-1.4, -22.5+1.4, -22.5+3.5, -16.0, -13.6, -6.5, 6.5, 14.0, 22.5-3.5, 22.5-1.4, 22.5+1.4, 22.5+3.5, 24.0, 25.6, 26.0, 26.1, 28.0, 28.5]
+    zs = [-14.0, -11.6, -9.6, -2.6, 0.0, 2.0, 3.0, 6.0, 8.0, 13.0, 19.0]
 
     g = RectGridMesh(xs, ys, zs)
     # 1. Main outer shell (Z = 0.0 to 19.0)
@@ -178,16 +181,15 @@ def generate_rear_enclosure(out_dir):
     # Main inner cavity for CYD display board (Z = 2.0 to 19.0)
     g.set_box(-44.1, 44.1, -26.1, 26.1, 2.0, 19.0, False)
 
-    # 2. USB-C side cutout (Left wall)
-    g.set_box(-46.5, -44.1, -6.5, 6.5, 6.0, 13.0, False)
-    # MicroSD side access slot (Right wall)
-    g.set_box(44.1, 46.5, -7.0, 7.0, 8.0, 11.5, False)
-
-    # 3. Four corner standoffs with M3 pilot holes (81mm x 45mm spacing)
+    # 2. Four corner standoff bosses (7x7mm, rising 6mm off floor)
+    # With 2.8mm pilot holes for M3 screws to thread directly into!
     for sx in [-40.5, 40.5]:
         for sy in [-22.5, 22.5]:
             g.set_box(sx - 3.5, sx + 3.5, sy - 3.5, sy + 3.5, 2.0, 8.0, True)
             g.set_box(sx - 1.4, sx + 1.4, sy - 1.4, sy + 1.4, 3.0, 8.0, False)
+
+    # 3. USB-C side cutout (Left wall)
+    g.set_box(-46.5, -44.1, -6.5, 6.5, 6.0, 13.0, False)
 
     # 4. GPS Backpack outer chamber (Extends backward: Z = -14.0 to 0.0)
     g.set_box(-32.0, 32.0, -16.0, 28.0, -14.0, 0.0, True)
@@ -195,17 +197,9 @@ def generate_rear_enclosure(out_dir):
     g.set_box(-29.6, 29.6, -13.6, 25.6, -11.6, 0.0, False)
 
     # 5. Right Bay: Ceramic Patch Antenna Tray (26.5mm x 26.5mm x 9mm)
-    # Partition rib between antenna bay and receiver bay
-    g.set_box(-0.5, 0.5, -13.6, 25.6, -11.6, -3.0, True)
-    # Coaxial cable relief channel
-    g.set_box(1.0, 15.0, -0.5, 5.0, -11.6, -8.6, False)
+    g.set_box(-1.0, 1.0, -13.6, 25.6, -11.6, -3.0, True)
 
-    # 6. Left Bay: GY-GPS6MV2 Receiver Board Cradle (27mm x 37mm)
-    # 2mm raised support rails lifting PCB off back floor
-    g.set_box(-28.5, -26.5, -12.5, 24.5, -11.6, -9.6, True)
-    g.set_box(-3.5, -1.5, -12.5, 24.5, -11.6, -9.6, True)
-
-    # 7. Internal Wire Passthrough Aperture into main CYD chamber
+    # 6. Internal Wire Passthrough Aperture into main CYD chamber
     # Directly behind the NM-CYD-C5 LP-UART P5 Header (GPIO 4, 5, 3.3V, GND)
     g.set_box(-22.0, -8.0, 14.0, 24.0, 0.0, 2.0, False)
 
@@ -249,27 +243,28 @@ def generate_desk_stand(out_dir):
     write_binary_stl(path, tri, "Desk_Stand_25deg")
 
 # ============================================================================
-# 4. TACTICAL AVIONICS TOP-POD BEZEL (93x82mm with Sun-Visor Brow)
+# 4. TACTICAL AVIONICS TOP-POD BEZEL (With M3 Counterbored Screw Holes)
 # ============================================================================
 def generate_top_pod_bezel(out_dir):
-    screen_cy = -12.5
-    xs = [-46.5, -42.1, -38.9, -34.75, -30.5, -29.5, -26.5, 30.5, 34.75, 38.9, 42.1, 46.5]
-    ys = [-41.0, screen_cy - 24.75, screen_cy - 22.0, screen_cy + 22.0, screen_cy + 24.75, 14.5, 41.0]
-    zs = [0.0, 1.8, 4.0]
+    cy = -12.5 # Lower display center
+    xs = [-46.5, -43.5, -40.5-1.6, -40.5+1.6, -37.5, -34.75, -30.5, 30.5, 34.75, 37.5, 40.5-1.6, 40.5+1.6, 43.5, 46.5]
+    ys = [-41.0, -38.0, -35.0-1.6, -35.0+1.6, -32.0, cy - 24.75, cy - 22.0, cy + 22.0, 10.0-1.6, 10.0+1.6, cy + 24.75, 13.0, 14.0, 41.0]
+    zs = [0.0, 1.8, 2.0, 4.0]
 
     g = RectGridMesh(xs, ys, zs)
-    # Solid plate
+    # Solid plate (Z = 0.0 to 4.0)
     g.set_box(-46.5, 46.5, -41.0, 41.0, 0.0, 4.0, True)
-    # LCD Glass pocket recess in lower display area
-    g.set_box(-34.75, 34.75, screen_cy - 24.75, screen_cy + 24.75, 0.0, 1.8, False)
-    # Active LCD view window
-    g.set_box(-30.5, 30.5, screen_cy - 22.0, screen_cy + 22.0, 1.8, 4.0, False)
-    # WS2812 Light guide aperture
-    g.set_box(-29.5, -26.5, screen_cy + 21.0, screen_cy + 24.0, 0.0, 4.0, False)
-    # 4 Corner screw holes
+    # LCD Glass pocket recess in lower display area (Z = 0.0 to 1.8)
+    g.set_box(-34.75, 34.75, cy - 24.75, cy + 24.75, 0.0, 1.8, False)
+    # Active LCD view window (Z = 1.8 to 4.0)
+    g.set_box(-30.5, 30.5, cy - 22.0, cy + 22.0, 1.8, 4.0, False)
+    # 4 Corner M3 Counterbored Screw Holes
     for sx in [-40.5, 40.5]:
-        for sy in [screen_cy - 22.5, screen_cy + 22.5]:
+        for sy in [-35.0, 10.0]:
+            # M3 shank through-hole (3.2mm)
             g.set_box(sx - 1.6, sx + 1.6, sy - 1.6, sy + 1.6, 0.0, 4.0, False)
+            # M3 head counterbore recess (6.0mm socket head, 2.0mm deep)
+            g.set_box(sx - 3.0, sx + 3.0, sy - 3.0, sy + 3.0, 2.0, 4.0, False)
 
     tri = g.generate_triangles()
     verify_manifold("AeroRadar_Front_Bezel_TopPod.stl", tri)
@@ -277,29 +272,31 @@ def generate_top_pod_bezel(out_dir):
     write_binary_stl(path, tri, "Front_Bezel_TopPod")
 
 # ============================================================================
-# 5. TACTICAL AVIONICS TOP-POD REAR ENCLOSURE (Zenith Radome Canopy)
+# 5. TACTICAL AVIONICS TOP-POD REAR ENCLOSURE (With M3 Standoff Bosses)
 # ============================================================================
 def generate_top_pod_rear(out_dir):
-    screen_cy = -12.5
-    xs = [-46.5, -44.1, -44.0, -39.1, -30.0, -2.0, 0.0, 2.0, 29.0, 39.1, 44.0, 44.1, 46.5]
-    ys = [-41.0, -38.6, -19.5, -5.5, 13.5, 15.5, 17.5, 38.6, 41.0]
-    zs = [0.0, 2.0, 6.0, 8.0, 11.5, 13.0, 20.0]
+    xs = [-46.5, -44.1, -40.5-3.5, -40.5-1.4, -40.5+1.4, -40.5+3.5, -28.0, -2.0, 0.0, 2.0, 28.0, 40.5-3.5, 40.5-1.4, 40.5+1.4, 40.5+3.5, 44.1, 46.5]
+    ys = [-41.0, -38.6, -35.0-3.5, -35.0-1.4, -35.0+1.4, -35.0+3.5, -19.0, -6.0, 10.0-3.5, 10.0-1.4, 10.0+1.4, 10.0+3.5, 13.5, 15.5, 38.6, 41.0]
+    zs = [0.0, 2.0, 3.0, 6.0, 8.0, 13.0, 20.0]
 
     g = RectGridMesh(xs, ys, zs)
     # Outer solid body (Z = 0.0 to 20.0)
     g.set_box(-46.5, 46.5, -41.0, 41.0, 0.0, 20.0, True)
-    # Lower cavity for CYD display board
+    # Lower cavity for CYD display board (Z = 2.0 to 20.0)
     g.set_box(-44.1, 44.1, -38.6, 13.5, 2.0, 20.0, False)
-    # Upper GPS canopy cavity (Zenith radome)
+    # Upper GPS canopy cavity (Zenith radome, Z = 2.0 to 20.0)
     g.set_box(-44.1, 44.1, 15.5, 38.6, 2.0, 20.0, False)
-    # USB-C port cutout
-    g.set_box(-46.5, -44.1, screen_cy - 6.5, screen_cy + 6.5, 6.0, 13.0, False)
 
-    # 4 corner standoffs with pilot holes in lower cavity
+    # 4 Corner Standoff Bosses with M3 pilot holes in lower cavity!
     for sx in [-40.5, 40.5]:
-        for sy in [screen_cy - 22.5, screen_cy + 22.5]:
+        for sy in [-35.0, 10.0]:
+            # Solid boss (7x7mm, rising from Z=2 to Z=8)
             g.set_box(sx - 3.5, sx + 3.5, sy - 3.5, sy + 3.5, 2.0, 8.0, True)
+            # M3 pilot hole inside boss (2.8x2.8mm, depth from Z=3 to Z=8)
             g.set_box(sx - 1.4, sx + 1.4, sy - 1.4, sy + 1.4, 3.0, 8.0, False)
+
+    # USB-C port cutout on left wall
+    g.set_box(-46.5, -44.1, -19.0, -6.0, 6.0, 13.0, False)
 
     tri = g.generate_triangles()
     verify_manifold("AeroRadar_Rear_Enclosure_TopPod.stl", tri)
@@ -312,7 +309,7 @@ def generate_top_pod_rear(out_dir):
 if __name__ == "__main__":
     out_dir = r"c:\Users\Aboude\Documents\AirRadar-CYD-C5\enclosure"
     os.makedirs(out_dir, exist_ok=True)
-    print("=== Generating 100% Watertight 2-Manifold Enclosure Models ===")
+    print("=== Generating 100% Watertight 2-Manifold Enclosure Models with Standoffs & Screws ===")
     generate_front_bezel(out_dir)
     generate_rear_enclosure(out_dir)
     generate_desk_stand(out_dir)
