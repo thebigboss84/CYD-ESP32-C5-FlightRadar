@@ -14,14 +14,15 @@ To suit different desk setups and printing preferences, two enclosure designs ar
   * **PCB Size**: $86.01\text{ mm} \times 60.00\text{ mm}$ (from official EasyEDA 3D STEP).
   * **Mounting Holes**: 4x M3 corner holes with exact spacing of **$78.00\text{ mm} \times 42.00\text{ mm}$** ($X = \pm 39.0\text{ mm}, Y = -16.0\text{ mm} \text{ and } +26.0\text{ mm}$).
   * **Precision Port Cutout ($34.5\text{ mm} \times 9.5\text{ mm}$)**: Lowered to $Z = 8.5\text{ to } 18.0\text{ mm}$ (centered with the underside surface-mount connectors) and widened from $Y = -12.5\text{ to } +22.0\text{ mm}$ to fully expose **both USB-C ports** (`USB1` & `USB3`) and provide generous strain-relief clearance for the **4-pin JST GPS connector** and its wiring leads.
-  * **$11.0\text{ mm}$ Internal Basement**: Beneath the CYD PCB, an $11.0\text{ mm}$ clear chamber houses both the GPS receiver board and the ceramic antenna side-by-side:
-    * **Left Bay ($29.0\text{ mm} \times 36.0\text{ mm}$)**: Holds the $25.5\times 35.5\text{ mm}$ GY-GPS6MV2 receiver PCB or official $25.5\times 25.5\text{ mm}$ NM-ATGM336H GPS module with full clearance for the 4-pin header connector.
-    * **Right Bay ($26.0\text{ mm} \times 26.0\text{ mm}$)**: Dedicated pocket holding the $25\times 25\times 8\text{ mm}$ ceramic patch antenna facing skyward, with a $3.0\text{ mm}$ air gap to the CYD board.
+  * **$11.0\text{ mm}$ Clear Flat-Floor Basement**: Beneath the CYD PCB, an open $88.0\text{ mm} \times 62.0\text{ mm} \times 11.0\text{ mm}$ unobstructed chamber with a **100% smooth, flat floor** (all raised square rails have been removed). This allows flexible placement for:
+    * **GY-GPS6MV2 receiver PCB** ($25.5\times 35.5\text{ mm}$) or official NM-ATGM336H GPS module.
+    * **Ceramic patch antenna** ($25\times 25\times 8\text{ mm}$) facing skyward.
+    * Components can be secured flat to the floor using double-sided mounting tape, or stood vertically along the side wall.
   * **Zero Support Printing**: The bottom of the rear chassis is completely flat ($Z=0$), laying flat on the 3D printer bed without any exterior support material needed.
   * **Mating & Interlocking**: The Front Bezel features an underside stepped alignment tongue ($87.4\text{ mm} \times 61.4\text{ mm} \times 1.5\text{ mm}$) that drops directly **inside** the top opening of the rear enclosure ($88.0\times 62.0\text{ mm}$), locking the bezel flush with zero wobble or slide.
 * **Parts to print**:
-  1. `AeroRadar_Front_Bezel.stl`
-  2. `AeroRadar_Rear_Enclosure.stl`
+  1. `AeroRadar_Front_Bezel.stl` (Keep existing print! No reprint needed if already printed)
+  2. `AeroRadar_Rear_Enclosure.stl` (Reprint this file with the flat floor & widened port cutouts)
   3. `AeroRadar_Desk_Stand_25deg.stl`
 
 ---
@@ -117,9 +118,10 @@ To suit different desk setups and printing preferences, two enclosure designs ar
    * Plug into the GY-GPS6MV2 module header pins (`VCC, RX, TX, GND`).
 2. **Install GPS & Antenna into Rear Shell**:
     * **For Style A (Unified Flat-Bottom Chassis)**:
-      * Place the $25\times 25\times 8\text{ mm}$ ceramic patch antenna into the dedicated antenna bay (right bay on the floor). Ensure the ceramic patch face points upward toward the sky.
+      * Place the ceramic patch antenna ($25\times 25\times 8\text{ mm}$) on the flat floor facing upward toward the sky.
       * Connect the thin coaxial cable to the GY-GPS6MV2 receiver board's U.FL connector.
-      * Slide the GY-GPS6MV2 receiver PCB into the left bay retention rails on the floor.
+      * Place the GY-GPS6MV2 receiver PCB flat on the floor beside the antenna (or stand it vertically along the interior wall).
+      * Secure both parts to the floor using a strip of double-sided foam mounting tape or Blu-Tack.
       * Connect the 4 DuPont jumper wires to the receiver header (`VCC, RX, TX, GND`).
     * **For Style B (Top Radome)**:
       * Place the ceramic patch antenna horizontally in the apex tray pointing straight up.

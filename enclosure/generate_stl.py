@@ -153,36 +153,28 @@ def generate_front_bezel(out_dir):
     write_binary_stl(path, tri, "Front_Bezel")
 
 # ============================================================================
-# 2. UNIFIED REAR ENCLOSURE (Flat Bottom, Lowered & Widened Cutout for USB-C & GPS)
+# 2. UNIFIED REAR ENCLOSURE (100% Flat Floor, 11mm Clear Basement, Full Cutout)
 # ============================================================================
 def generate_rear_enclosure(out_dir):
-    xs = [-47.0, -44.0, -39.0-3.5, -39.0-1.4, -39.0+1.4, -39.0+3.5, -38.0, -9.0, -7.5, 9.5, 11.0, 37.0, 38.5, 39.0-3.5, 39.0-1.4, 39.0+1.4, 39.0+3.5, 44.0, 47.0]
-    ys = [-34.0, -31.0, -16.0-3.5, -16.0-1.4, -16.0+1.4, -16.0+3.5, -12.5, -18.0, -13.0, 13.0, 18.0, 22.0, 26.0-3.5, 26.0-1.4, 26.0+1.4, 26.0+3.5, 31.0, 34.0]
-    zs = [0.0, 2.5, 5.5, 8.5, 13.5, 18.0, 25.0]
+    xs = [-47.0, -44.0, -39.0-3.5, -39.0-1.4, -39.0+1.4, -39.0+3.5, 39.0-3.5, 39.0-1.4, 39.0+1.4, 39.0+3.5, 44.0, 47.0]
+    ys = [-34.0, -31.0, -16.0-3.5, -16.0-1.4, -16.0+1.4, -16.0+3.5, -12.5, 22.0, 26.0-3.5, 26.0-1.4, 26.0+1.4, 26.0+3.5, 31.0, 34.0]
+    zs = [0.0, 2.5, 8.5, 13.5, 18.0, 25.0]
 
     g = RectGridMesh(xs, ys, zs)
     # 1. Main outer shell (Clean flat bottom at Z = 0.0, height 25.0mm)
     g.set_box(-47.0, 47.0, -34.0, 34.0, 0.0, 25.0, True)
-    # Inner cavity (Z = 2.5 to 25.0mm, size 88.0 x 62.0mm)
+    # Inner cavity (Z = 2.5 to 25.0mm, size 88.0 x 62.0mm) - 100% smooth flat floor!
     g.set_box(-44.0, 44.0, -31.0, 31.0, 2.5, 25.0, False)
 
-    # 2. Left Bay: Internal GPS Receiver Board Cradle Rails (25.5x35.5mm or 25.5x25.5mm)
-    g.set_box(-38.0, -9.0, -18.0, 18.0, 2.5, 5.5, True)
-    g.set_box(-37.0, -10.0, -17.5, 17.5, 3.5, 5.5, False)
-
-    # 3. Right Bay: Internal Ceramic Patch Antenna Tray Rails (25x25mm antenna)
-    g.set_box(11.0, 37.0, -13.0, 13.0, 2.5, 5.5, True)
-    g.set_box(11.5, 36.5, -12.5, 12.5, 3.5, 5.5, False)
-
-    # 4. Four corner standoff bosses (solid 7x7mm columns, rising 11mm off floor to Z = 13.5mm)
-    # CYD PCB rests on top at Z = 13.5mm, leaving 11mm of clear space below!
+    # 2. Four corner standoff bosses (solid 7x7mm columns, rising 11mm off floor to Z = 13.5mm)
+    # CYD PCB rests on top at Z = 13.5mm, leaving 11.0mm of unobstructed space below for GPS hardware!
     for hx, hy in HOLES_C5:
         g.set_box(hx - 3.5, hx + 3.5, hy - 3.5, hy + 3.5, 2.5, 13.5, True)
         g.set_box(hx - 1.4, hx + 1.4, hy - 1.4, hy + 1.4, 5.5, 13.5, False)
 
-    # 5. Lowered & Widened Cutout for Dual USB-C + GPS Connector with wiring relief
+    # 3. Lowered & Widened Cutout for Dual USB-C + GPS Connector with wiring relief
     # Height Z = 8.5 to 18.0mm: Accommodates underside surface-mount ports with shroud clearance
-    # Span Y = -12.5 to +22.0mm: Completely clears USB-C #1, USB-C #2, and JST connector wires
+    # Span Y = -12.5 to +22.0mm (34.5mm wide opening): Completely clears USB-C #1, USB-C #2, and JST connector wires
     g.set_box(-47.0, -44.0, -12.5, 22.0, 8.5, 18.0, False)
 
     tri = g.generate_triangles()
