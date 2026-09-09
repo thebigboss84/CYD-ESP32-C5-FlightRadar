@@ -13,7 +13,7 @@ To suit different desk setups and printing preferences, two enclosure designs ar
 * **Engineered for Exact RockBase NM-CYD-C5 CAD Specifications**:
   * **PCB Size**: $86.01\text{ mm} \times 60.00\text{ mm}$ (from official EasyEDA 3D STEP).
   * **Mounting Holes**: 4x M3 corner holes with exact spacing of **$78.00\text{ mm} \times 42.00\text{ mm}$** ($X = \pm 39.0\text{ mm}, Y = -16.0\text{ mm} \text{ and } +26.0\text{ mm}$).
-  * **Dual USB-C Cutout**: Wide pill cutout on the left wall accommodating both **USB1** (CH340 programming/power) and **USB3** (ESP32-C5 native USB/OTG).
+  * **Precision Port Cutout ($34.5\text{ mm} \times 9.5\text{ mm}$)**: Lowered to $Z = 8.5\text{ to } 18.0\text{ mm}$ (centered with the underside surface-mount connectors) and widened from $Y = -12.5\text{ to } +22.0\text{ mm}$ to fully expose **both USB-C ports** (`USB1` & `USB3`) and provide generous strain-relief clearance for the **4-pin JST GPS connector** and its wiring leads.
   * **$11.0\text{ mm}$ Internal Basement**: Beneath the CYD PCB, an $11.0\text{ mm}$ clear chamber houses both the GPS receiver board and the ceramic antenna side-by-side:
     * **Left Bay ($29.0\text{ mm} \times 36.0\text{ mm}$)**: Holds the $25.5\times 35.5\text{ mm}$ GY-GPS6MV2 receiver PCB or official $25.5\times 25.5\text{ mm}$ NM-ATGM336H GPS module with full clearance for the 4-pin header connector.
     * **Right Bay ($26.0\text{ mm} \times 26.0\text{ mm}$)**: Dedicated pocket holding the $25\times 25\times 8\text{ mm}$ ceramic patch antenna facing skyward, with a $3.0\text{ mm}$ air gap to the CYD board.

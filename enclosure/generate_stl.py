@@ -153,12 +153,12 @@ def generate_front_bezel(out_dir):
     write_binary_stl(path, tri, "Front_Bezel")
 
 # ============================================================================
-# 2. UNIFIED REAR ENCLOSURE (Flat Bottom, Exact C5 Standoffs, Dual USB-C Cutout)
+# 2. UNIFIED REAR ENCLOSURE (Flat Bottom, Lowered & Widened Cutout for USB-C & GPS)
 # ============================================================================
 def generate_rear_enclosure(out_dir):
     xs = [-47.0, -44.0, -39.0-3.5, -39.0-1.4, -39.0+1.4, -39.0+3.5, -38.0, -9.0, -7.5, 9.5, 11.0, 37.0, 38.5, 39.0-3.5, 39.0-1.4, 39.0+1.4, 39.0+3.5, 44.0, 47.0]
-    ys = [-34.0, -31.0, -16.0-3.5, -16.0-1.4, -16.0+1.4, -16.0+3.5, -18.0, -13.0, -12.0, 9.0, 13.0, 18.0, 26.0-3.5, 26.0-1.4, 26.0+1.4, 26.0+3.5, 31.0, 34.0]
-    zs = [0.0, 2.5, 5.5, 13.5, 20.0, 25.0]
+    ys = [-34.0, -31.0, -16.0-3.5, -16.0-1.4, -16.0+1.4, -16.0+3.5, -12.5, -18.0, -13.0, 13.0, 18.0, 22.0, 26.0-3.5, 26.0-1.4, 26.0+1.4, 26.0+3.5, 31.0, 34.0]
+    zs = [0.0, 2.5, 5.5, 8.5, 13.5, 18.0, 25.0]
 
     g = RectGridMesh(xs, ys, zs)
     # 1. Main outer shell (Clean flat bottom at Z = 0.0, height 25.0mm)
@@ -180,8 +180,10 @@ def generate_rear_enclosure(out_dir):
         g.set_box(hx - 3.5, hx + 3.5, hy - 3.5, hy + 3.5, 2.5, 13.5, True)
         g.set_box(hx - 1.4, hx + 1.4, hy - 1.4, hy + 1.4, 5.5, 13.5, False)
 
-    # 5. Dual USB-C Cutout (Left wall, spanning both USB1 and USB3 at Z = 13.5 to 20.0mm)
-    g.set_box(-47.0, -44.0, -12.0, 9.0, 13.5, 20.0, False)
+    # 5. Lowered & Widened Cutout for Dual USB-C + GPS Connector with wiring relief
+    # Height Z = 8.5 to 18.0mm: Accommodates underside surface-mount ports with shroud clearance
+    # Span Y = -12.5 to +22.0mm: Completely clears USB-C #1, USB-C #2, and JST connector wires
+    g.set_box(-47.0, -44.0, -12.5, 22.0, 8.5, 18.0, False)
 
     tri = g.generate_triangles()
     verify_manifold("AeroRadar_Rear_Enclosure.stl", tri)
@@ -248,8 +250,8 @@ def generate_top_pod_bezel(out_dir):
 # ============================================================================
 def generate_top_pod_rear(out_dir):
     xs = [-47.0, -44.0, -39.0-3.5, -39.0-1.4, -39.0+1.4, -39.0+3.5, -30.0, -14.0, 14.0, 30.0, 39.0-3.5, 39.0-1.4, 39.0+1.4, 39.0+3.5, 44.0, 47.0]
-    ys = [-46.5, -43.5, -16.0-12.5-3.5, -16.0-12.5-1.4, -16.0-12.5+1.4, -16.0-12.5+3.5, -12.0-12.5, 9.0-12.5, 26.0-12.5-3.5, 26.0-12.5-1.4, 26.0-12.5+1.4, 26.0-12.5+3.5, 18.5, 21.0, 43.5, 46.5]
-    zs = [0.0, 2.5, 5.5, 13.5, 20.0, 25.0]
+    ys = [-46.5, -43.5, -25.0, -16.0-12.5-3.5, -16.0-12.5-1.4, -16.0-12.5+1.4, -16.0-12.5+3.5, 9.5, 26.0-12.5-3.5, 26.0-12.5-1.4, 26.0-12.5+1.4, 26.0-12.5+3.5, 18.5, 21.0, 43.5, 46.5]
+    zs = [0.0, 2.5, 5.5, 8.5, 13.5, 18.0, 25.0]
 
     g = RectGridMesh(xs, ys, zs)
     g.set_box(-47.0, 47.0, -46.5, 46.5, 0.0, 25.0, True)
@@ -261,8 +263,8 @@ def generate_top_pod_rear(out_dir):
     for hx, hy in HOLES_C5:
         g.set_box(hx - 3.5, hx + 3.5, hy - 12.5 - 3.5, hy - 12.5 + 3.5, 2.5, 13.5, True)
         g.set_box(hx - 1.4, hx + 1.4, hy - 12.5 - 1.4, hy - 12.5 + 1.4, 5.5, 13.5, False)
-    # Dual USB-C cutout
-    g.set_box(-47.0, -44.0, -12.0-12.5, 9.0-12.5, 13.5, 20.0, False)
+    # Lowered & widened dual USB-C + GPS cutout
+    g.set_box(-47.0, -44.0, -25.0, 9.5, 8.5, 18.0, False)
 
     tri = g.generate_triangles()
     verify_manifold("AeroRadar_Rear_Enclosure_TopPod.stl", tri)

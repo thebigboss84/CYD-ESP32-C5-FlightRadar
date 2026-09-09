@@ -61,9 +61,9 @@ bp_d            = 14.0; // Backpack depth extending behind shell (mm)
 stand_tilt_deg  = 25.0; // Desktop viewing tilt angle (degrees)
 
 // Calculated bounding parameters
-outer_w         = pcb_w + (wall_t * 2) + (clearance * 2); // 91.8 -> 93.0 mm
-outer_h         = pcb_h + (wall_t * 2) + (clearance * 2); // 55.8 -> 57.0 mm
-rear_depth      = 19.0; // Main enclosure depth (mm)
+outer_w         = 94.0; // Enclosure outer width (mm)
+outer_h         = 68.0; // Enclosure outer height (mm)
+rear_depth      = 25.0; // Main enclosure depth with 11mm basement (mm)
 
 $fn = 40; // Circle facet resolution
 
