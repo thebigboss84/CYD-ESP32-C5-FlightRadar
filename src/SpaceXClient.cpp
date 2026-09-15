@@ -9,14 +9,21 @@ SpaceXRecord SpaceXClient::spaceX = { false };
 
 int64_t SpaceXClient::parseIsoToEpoch(const char *isoStr) {
   if (!isoStr || strlen(isoStr) < 19) return 0;
-  struct tm tm_time;
-  memset(&tm_time, 0, sizeof(struct tm));
-  sscanf(isoStr, "%d-%d-%dT%d:%d:%d",
-         &tm_time.tm_year, &tm_time.tm_mon, &tm_time.tm_mday,
-         &tm_time.tm_hour, &tm_time.tm_min, &tm_time.tm_sec);
-  tm_time.tm_year -= 1900;
-  tm_time.tm_mon  -= 1;
-  return (int64_t)mktime(&tm_time);
+  int year, month, day, hour, minute, second;
+  if (sscanf(isoStr, "%d-%d-%dT%d:%d:%d",
+             &year, &month, &day, &hour, &minute, &second) != 6) {
+    return 0;
+  }
+
+  // Launch Library timestamps are UTC. The ESP32-C5 Arduino toolchain does
+  // not provide timegm(), while mktime() would apply the configured local TZ.
+  year -= month <= 2;
+  const int era = (year >= 0 ? year : year - 399) / 400;
+  const unsigned yearOfEra = (unsigned)(year - era * 400);
+  const unsigned dayOfYear = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
+  const unsigned dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
+  const int64_t daysSinceEpoch = (int64_t)era * 146097 + dayOfEra - 719468;
+  return daysSinceEpoch * 86400LL + (int64_t)hour * 3600LL + (int64_t)minute * 60LL + second;
 }
 
 const SpaceXRecord &SpaceXClient::getData() {

@@ -4,7 +4,7 @@
 #include "OpenSkyClient.h"
 #include <math.h>
 
-void IssView::draw(const char *cityName) {
+void IssView::draw(const char *cityName, float radarRadiusKm) {
   Arduino_GFX *gfx = DisplayEngine::getGfx();
   if (!gfx) return;
 
@@ -99,7 +99,7 @@ void IssView::draw(const char *cityName) {
   }
 
   int compX = 245;
-  int compY = CONTENT_Y + 95;
+  int compY = CONTENT_Y + 101;
   int compR = 48;
 
   gfx->drawCircle(compX, compY, compR, COL_GREEN);
@@ -113,15 +113,41 @@ void IssView::draw(const char *cityName) {
   gfx->setCursor(compX - 2, compY + compR + 2);  gfx->print("S");
   gfx->setCursor(compX - compR - 8, compY - 3);  gfx->print("W");
 
-  float rad = (iss.bearing - 90.0f) * 0.0174533f;
-  int issX = compX + (int)((compR - 4) * cosf(rad));
-  int issY = compY + (int)((compR - 4) * sinf(rad));
+  // This is a local ground-track map, centered on the active GPS/city location.
+  // Unlike the prior bearing-only compass, the ISS marker is shown only when
+  // its ground position is within the currently selected radar range.
+  radarRadiusKm = fmaxf(radarRadiusKm, 1.0f);
+  bool issInRange = iss.dist_km <= radarRadiusKm;
 
-  gfx->drawLine(compX, compY, issX, issY, COL_YELLOW);
-  gfx->fillCircle(issX, issY, 4, COL_YELLOW);
-  gfx->drawCircle(issX, issY, 6, COL_WHITE);
+  gfx->fillCircle(compX, compY, 2, COL_CYAN);
+  gfx->setTextColor(COL_CYAN);
+  gfx->setCursor(compX - 14, compY - 4);
+  gfx->print("YOU");
 
-  gfx->setTextColor(COL_YELLOW);
-  gfx->setCursor(compX - 10, compY + compR + 14);
-  gfx->print("ISS SKY");
+  if (issInRange) {
+    float rad = (iss.bearing - 90.0f) * 0.0174533f;
+    float mapDistance = (compR - 7) * (iss.dist_km / radarRadiusKm);
+    int issX = compX + (int)(mapDistance * cosf(rad));
+    int issY = compY + (int)(mapDistance * sinf(rad));
+
+    gfx->drawLine(compX, compY, issX, issY, COL_YELLOW);
+    gfx->fillCircle(issX, issY, 4, COL_YELLOW);
+    gfx->drawCircle(issX, issY, 6, COL_WHITE);
+    gfx->setTextColor(COL_YELLOW);
+    gfx->setCursor(compX - 10, compY + compR + 6);
+    gfx->print("ISS IN MAP");
+  } else {
+    gfx->setTextColor(COL_GRAY);
+    gfx->setCursor(compX - 18, compY - 4);
+    gfx->print("ISS OUT");
+    gfx->setCursor(compX - 18, compY + 7);
+    gfx->printf("%.0f km", iss.dist_km);
+    gfx->setTextColor(COL_DIM_GRAY);
+    gfx->setCursor(compX - 18, compY + compR + 6);
+    gfx->print("OUT OF MAP");
+  }
+
+  gfx->setTextColor(COL_GREEN);
+  gfx->setCursor(compX - 24, compY + compR + 16);
+  gfx->printf("LOCAL %.0fkm", radarRadiusKm);
 }

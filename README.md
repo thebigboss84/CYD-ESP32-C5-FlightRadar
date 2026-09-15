@@ -38,7 +38,7 @@ Inspired by [Flight-CYD-ESP32-Radar](https://github.com/Coreymillia/Flight-CYD-E
 ### 2. WS2812 RGB LED Aerospace Beacon (GPIO 27)
 Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
 * **Priority 1 (Emergency Red Strobe @ 10 Hz)**: Active in-flight emergency squawk (`7700`, `7600`, `7500`).
-* **Priority 2 (Pulsing Warning Red @ 2 Hz)**: Active Seismic Earthquake Alert ($M \ge 2.0$ within 200 km of current GPS/city coordinates, < 90 min).
+* **Priority 2 (Pulsing Warning Red @ 2 Hz)**: Active Seismic Earthquake Alert ($M \ge 4.0$ within 200 km of current GPS/city coordinates, < 90 min).
 * **Priority 3 (Rapid Amber Strobe @ 4 Hz)**: Active SpaceX liftoff visible in sky (T-0 to T+10m).
 * **Priority 4 (Pulsing Amber Breath)**: SpaceX launch countdown (T-15m to T-0).
 * **Priority 5 (Interstellar Purple Breath)**: ISS visible overhead pass (< 800 km in daylight).
@@ -59,6 +59,7 @@ Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
 * Real-time orbital coordinates updated via `wheretheiss.at`.
 * Displays latitude, longitude, altitude (~420 km), velocity (~27,600 km/h), and distance.
 * **Live Horizon Elevation & Sightline**: Calculates real-time elevation angle above the horizon. Displays a prominent **"LOOK UP! ISS VISIBLE AT XXX deg (Elev +XX deg)"** banner whenever the station is above the horizon in sunlight.
+* **Local ISS Map**: The mini-radar is centered on the active GPS fix or selected city and uses the active radar range. The ISS marker appears only when its ground track is inside that radius; otherwise the map clearly reports its out-of-range distance.
 
 ### 6. SpaceX Launch Telemetry & Sky Sightlines
 * Live countdown timer and mission telemetry for upcoming SpaceX launches (Falcon 9, Falcon Heavy, Starship) via Launch Library 2.
@@ -133,7 +134,7 @@ Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
 ### 11. USGS Real-Time Seismic Observatory & Earthquake Warning System
 * **Live USGS FDSNWS GeoJSON Feeds**: Queries the United States Geological Survey real-time earthquake database within a **200 km radius** of your active GPS location or selected city.
 * **Earthquake Early Warning Trigger**: Flags an active emergency alert if a tremor meets:
-  * **Magnitude $M \ge 2.0$** (filters imperceptible micro-tremors).
+  * **Magnitude $M \ge 4.0$**.
   * **Proximity $\le 200\text{ km}$** from current GPS/city coordinates.
   * **Elapsed Time $\le 90\text{ minutes}$** since origin time.
 * **Visual & Hardware Alarm**:
@@ -141,6 +142,11 @@ Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
   * **Radar Scope Alert Banner**: Renders `! SEISMIC M{mag}: {place} ({dist}km, {depth}km) [TAP]` directly atop the radar view.
   * **Shockwave Ripple Rings**: Renders expanding epicenter concentric wave rings on the flight radar screen if within current scope radius.
   * **Flashing Footer Tab**: The bottom navigation tab **`QUAKE`** flashes vibrant red while an alert is active.
+
+### 12. Speaker Alerts
+* Connect a passive piezo speaker or buzzer signal lead to **GPIO 26** (change `SPEAKER_PIN` in `include/AppConfig.h` if yours is wired differently), with its ground connected to GND.
+* A new nearby M4.0+ quake plays one urgent three-pair tone pattern once per USGS event.
+* The next SpaceX launch plays a brief notice when it enters the final 15 minutes, plus a distinct liftoff fanfare at T-0. Alerts run without pausing radar updates.
 * **Dedicated Seismology View (`QUAKE` tab)**:
   * **Richter Magnitude Badge**: Dynamic severity color coding (Green for $M < 2.5$, Amber for $2.5 \le M < 4.0$, Red for $M \ge 4.0$).
   * **Epicenter Telemetry**: Precise geographic place name, distance in km, compass bearing, focal depth, elapsed age in minutes, and P-wave / S-wave propagation status.

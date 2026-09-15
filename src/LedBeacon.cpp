@@ -65,7 +65,7 @@ void LedBeacon::update() {
     return;
   }
 
-  // 1b. Seismic Warning Alert (< 200 km, M >= 2.0 within last 90 min) - High-Intensity Warning Red Pulse
+  // 1b. Seismic Warning Alert (< 200 km, M >= configured threshold within last 90 min)
   if (seismicAlert) {
     if (now - lastTick >= 35) {
       lastTick = now;

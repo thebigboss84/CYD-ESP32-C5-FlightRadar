@@ -136,8 +136,8 @@ bool SeismicClient::fetch(float userLat, float userLon) {
       rec.age_min = 0;
     }
 
-    // Alert criteria: M >= 2.0, within 200 km, occurred within last 90 minutes
-    if (rec.mag >= 2.0f && rec.dist_km <= 200.0f && rec.age_min <= 90) {
+    // Alert criteria: M >= configured threshold, within 200 km, occurred within last 90 minutes.
+    if (rec.mag >= QUAKE_ALERT_MAGNITUDE && rec.dist_km <= 200.0f && rec.age_min <= 90) {
       rec.is_alert = true;
       alertActive = true;
     }

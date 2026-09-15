@@ -16,6 +16,7 @@
 #include "IssView.h"
 #include "SpaceXView.h"
 #include "LedBeacon.h"
+#include "SpeakerAlert.h"
 #include "CitySelectView.h"
 #include "SeismicClient.h"
 #include "SeismicView.h"
@@ -79,7 +80,7 @@ static void redrawCurrentView() {
       WeatherView::draw(getActiveCityName());
       break;
     case MODE_ISS:
-      IssView::draw(getActiveCityName());
+      IssView::draw(getActiveCityName(), ConfigPortal::getRadius());
       break;
     case MODE_SPACEX:
       SpaceXView::draw();
@@ -130,6 +131,7 @@ void setup() {
 
   DisplayEngine::begin();
   LedBeacon::begin();
+  SpeakerAlert::begin();
   GpsManager::begin();
   ConfigPortal::loadSettings();
 
@@ -306,8 +308,8 @@ void loop() {
     if (now - lastIssFetch >= ISS_REFRESH_MS) {
       lastIssFetch = now;
       IssClient::fetch(getActiveLat(), getActiveLon());
-      if (currentMode == MODE_ISS) {
-        IssView::draw(getActiveCityName());
+    if (currentMode == MODE_ISS) {
+        IssView::draw(getActiveCityName(), ConfigPortal::getRadius());
       }
     }
 
@@ -359,12 +361,14 @@ void loop() {
   // 7. WS2812 Aerospace RGB Beacon Updates
   LedBeacon::setEmergency(OpenSkyClient::hasActiveEmergency());
   LedBeacon::setAircraftOverhead(OpenSkyClient::hasAircraftOverhead(6.0f));
-  LedBeacon::setSeismicAlert(SeismicClient::hasActiveAlert(), SeismicClient::getLatest().mag);
+  const SeismicRecord &quake = SeismicClient::getLatest();
+  LedBeacon::setSeismicAlert(SeismicClient::hasActiveAlert(), quake.mag);
 
   const SpaceXRecord &sp = SpaceXClient::getData();
+  int64_t diff = 0;
   if (sp.valid && sp.visible_in_sky && sp.launch_epoch_utc > 0) {
     time_t nowUtc = time(nullptr);
-    int64_t diff = sp.launch_epoch_utc - (int64_t)nowUtc;
+    diff = sp.launch_epoch_utc - (int64_t)nowUtc;
     LedBeacon::setSpaceXState(diff > 0 && diff <= 900, diff <= 0 && diff >= -600);
   } else {
     LedBeacon::setSpaceXState(false, false);
@@ -372,6 +376,11 @@ void loop() {
 
   const IssRecord &iss = IssClient::getData();
   LedBeacon::setIssPass(iss.valid && iss.dist_km <= 800.0f && iss.daylight);
+
+  SpeakerAlert::update(SeismicClient::hasActiveAlert(), quake.id,
+                       sp.valid && diff > 0 && diff <= SPACEX_NOTICE_WINDOW_SEC,
+                       sp.valid && diff <= 0 && diff >= -600,
+                       sp.launch_epoch_utc);
 
   LedBeacon::update();
 

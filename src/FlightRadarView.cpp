@@ -8,6 +8,7 @@
 float FlightRadarView::sweepAngle = 0.0f;
 float FlightRadarView::currentRadiusKm = 100.0f;
 TrafficFilter FlightRadarView::activeFilter = FILTER_ALL;
+static bool radarScaleInitialized = false;
 
 void FlightRadarView::cycleZoom() {
   if (currentRadiusKm <= 25.0f) currentRadiusKm = 50.0f;
@@ -60,6 +61,11 @@ void FlightRadarView::draw(float defaultRadiusKm) {
   Arduino_GFX *gfx = DisplayEngine::getGfx();
   if (!gfx) return;
 
+  // Honor the saved range on first entry, then preserve the user's touch choice.
+  if (!radarScaleInitialized) {
+    currentRadiusKm = defaultRadiusKm;
+    radarScaleInitialized = true;
+  }
   float radiusKm = currentRadiusKm;
 
   // 1. Deep aerospace pitch-black canvas
@@ -121,63 +127,63 @@ void FlightRadarView::draw(float defaultRadiusKm) {
   int count = OpenSkyClient::getCount();
 
   // Top-Left Badge: Range (Tap to Zoom) & Filter (Tap to Filter)
-  gfx->fillRoundRect(4, CONTENT_Y + 4, 64, 34, 4, 0x0842);
-  gfx->drawRoundRect(4, CONTENT_Y + 4, 64, 34, 4, 0x0269);
+  gfx->fillRoundRect(4, CONTENT_Y + 4, 78, 34, 4, 0x0842);
+  gfx->drawRoundRect(4, CONTENT_Y + 4, 78, 34, 4, 0x0269);
 
-  gfx->setTextColor(0x8410); gfx->setCursor(8, CONTENT_Y + 7);  gfx->print("RNG:");
+  gfx->setTextColor(0x8410); gfx->setCursor(8, CONTENT_Y + 7);  gfx->print("RANGE ");
   gfx->setTextColor(COL_CYAN); gfx->printf("%.0fk", radiusKm);
 
-  gfx->setTextColor(0x8410); gfx->setCursor(8, CONTENT_Y + 17); gfx->print("FLT:");
+  gfx->setTextColor(0x8410); gfx->setCursor(8, CONTENT_Y + 17); gfx->print("FILTER ");
   if (activeFilter == FILTER_ALL) {
-    gfx->setTextColor(count > 0 ? 0x07E0 : COL_YELLOW); gfx->printf("%d ALL", count);
+    gfx->setTextColor(count > 0 ? 0x07E0 : COL_YELLOW); gfx->print("ALL");
   } else if (activeFilter == FILTER_MILITARY) {
-    gfx->setTextColor(0xFD20); gfx->print("MILITARY");
+    gfx->setTextColor(0xFD20); gfx->print("MIL");
   } else {
-    gfx->setTextColor(0x07E0); gfx->print("HELO/COP");
+    gfx->setTextColor(0x07E0); gfx->print("HELO");
   }
 
   gfx->setCursor(8, CONTENT_Y + 27);
   if (GpsManager::hasFix()) {
     gfx->setTextColor(0x07E0);
-    gfx->printf("GPS:%dsat", GpsManager::getSatellites());
+    gfx->print("TAP TOP ROWS");
   } else {
     gfx->setTextColor(0x8410);
-    gfx->print("GPS:N/A");
+    gfx->print("TAP TOP ROWS");
   }
 
   // Top-Right Badge: Closest Target
-  gfx->fillRoundRect(SCREEN_W - 64, CONTENT_Y + 4, 60, 34, 4, 0x0842);
-  gfx->drawRoundRect(SCREEN_W - 64, CONTENT_Y + 4, 60, 34, 4, 0x0269);
+  gfx->fillRoundRect(SCREEN_W - 68, CONTENT_Y + 4, 64, 34, 4, 0x0842);
+  gfx->drawRoundRect(SCREEN_W - 68, CONTENT_Y + 4, 64, 34, 4, 0x0269);
   gfx->setTextColor(0x8410);
-  gfx->setCursor(SCREEN_W - 60, CONTENT_Y + 7);
+  gfx->setCursor(SCREEN_W - 64, CONTENT_Y + 7);
   gfx->print("CLOSEST");
   if (count > 0) {
     const FlightRecord *nr = OpenSkyClient::getFlight(0);
     if (nr) {
       gfx->setTextColor(COL_YELLOW);
-      gfx->setCursor(SCREEN_W - 60, CONTENT_Y + 18);
+      gfx->setCursor(SCREEN_W - 64, CONTENT_Y + 18);
       char nrBuf[12];
       snprintf(nrBuf, sizeof(nrBuf), "%.0fk", nr->dist_km);
       gfx->print(nrBuf);
 
       gfx->setTextColor(COL_CYAN);
-      gfx->setCursor(SCREEN_W - 60, CONTENT_Y + 28);
+      gfx->setCursor(SCREEN_W - 64, CONTENT_Y + 28);
       char csBuf[10];
       snprintf(csBuf, sizeof(csBuf), "%.7s", nr->callsign);
       gfx->print(csBuf);
     }
   } else {
     gfx->setTextColor(COL_GRAY);
-    gfx->setCursor(SCREEN_W - 60, CONTENT_Y + 18);
+    gfx->setCursor(SCREEN_W - 64, CONTENT_Y + 18);
     gfx->print("NONE");
   }
 
-  // Bottom Altitude Color Keys
-  gfx->setTextColor(0x07FF); gfx->setCursor(6, CONTENT_Y + CONTENT_H - 18); gfx->print("^ >20k");
-  gfx->setTextColor(0x07E0); gfx->setCursor(6, CONTENT_Y + CONTENT_H - 9);  gfx->print("- 10-20k");
-
-  gfx->setTextColor(0xFFE0); gfx->setCursor(SCREEN_W - 52, CONTENT_Y + CONTENT_H - 18); gfx->print("v <10k");
-  gfx->setTextColor(0x632C); gfx->setCursor(SCREEN_W - 52, CONTENT_Y + CONTENT_H - 9);  gfx->print("_ GND");
+  // Compact altitude legend keeps the radar edge clear for target labels.
+  const int legendY = CONTENT_Y + CONTENT_H - 10;
+  gfx->setTextColor(0x07FF); gfx->setCursor(6, legendY); gfx->print("HI");
+  gfx->setTextColor(0x07E0); gfx->setCursor(26, legendY); gfx->print("MID");
+  gfx->setTextColor(0xFFE0); gfx->setCursor(52, legendY); gfx->print("LOW");
+  gfx->setTextColor(0x632C); gfx->setCursor(78, legendY); gfx->print("GND");
 
   // 5. Emergency Squawk Alert Banner (If Active)
   const FlightRecord *emg = OpenSkyClient::getEmergencyFlight();
@@ -202,7 +208,7 @@ void FlightRadarView::draw(float defaultRadiusKm) {
       gfx->setTextColor(0xFFFF);
       gfx->setTextSize(1);
       gfx->setCursor(22, bannerY + 5);
-      gfx->printf("! SEISMIC M%.1f: %s (%3.0fkm, %dm) [TAP]",
+      gfx->printf("! M%.1f QUAKE: %s (%3.0fkm, %dm) [TAP]",
                   q.mag, q.place, q.dist_km, q.age_min);
     }
   }

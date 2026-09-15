@@ -22,6 +22,11 @@
 #define TOUCH_IRQ  -1
 
 #define LED_PIN    27
+#ifndef SPEAKER_PIN
+// Set this to the GPIO used by your passive piezo speaker/buzzer.
+// GPIO 26 is unused by the NM-CYD-C5 display, touch, GPS, and status LED.
+#define SPEAKER_PIN 26
+#endif
 #ifndef BOARD_BOOT_PIN
 #define BOARD_BOOT_PIN 28
 #endif
@@ -50,6 +55,11 @@
 #define CONTENT_CY   (CONTENT_Y + CONTENT_H / 2)       // 119px
 
 #define RADAR_RADIUS 90                                // Scope radius in pixels
+
+// Local audible warning thresholds. Earthquakes must be within the existing
+// 200 km / 90 minute seismic monitoring window to trigger the alarm.
+#define QUAKE_ALERT_MAGNITUDE 4.0f
+#define SPACEX_NOTICE_WINDOW_SEC (15UL * 60UL)
 
 // ============================================================================
 // COLOR PALETTE (RGB565)
@@ -200,7 +210,7 @@ struct SeismicRecord {
   float   bearing;
   int64_t epoch_ms;
   int     age_min;
-  bool    is_alert; // Mag >= 2.0, dist <= 200km, age <= 90min
+  bool    is_alert; // Mag >= QUAKE_ALERT_MAGNITUDE, dist <= 200km, age <= 90min
 };
 
 struct CityPreset {
