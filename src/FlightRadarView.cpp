@@ -335,59 +335,29 @@ void FlightRadarView::updateSweep(float defaultRadiusKm) {
   Arduino_GFX *gfx = DisplayEngine::getGfx();
   if (!gfx) return;
 
-  float radiusKm = currentRadiusKm;
   const int cx = 160;
   const int cy = 119;
-  const int r  = 90;
+  const int r = 90;
 
-  // 1. Erase previous sweep line (from r=4 to r-2)
-  float prevRad = sweepAngle * (float)M_PI / 180.0f;
-  int px1 = cx + (int)(sinf(prevRad) * 4.0f);
-  int py1 = cy - (int)(cosf(prevRad) * 4.0f);
-  int px2 = cx + (int)(sinf(prevRad) * (r - 2));
-  int py2 = cy - (int)(cosf(prevRad) * (r - 2));
-  gfx->drawLine(px1, py1, px2, py2, 0x0000);
+  float previousRad = sweepAngle * (float)M_PI / 180.0f;
+  int previousMidX = cx + (int)(sinf(previousRad) * (r / 2));
+  int previousMidY = cy - (int)(cosf(previousRad) * (r / 2));
+  int previousEndX = cx + (int)(sinf(previousRad) * (r - 2));
+  int previousEndY = cy - (int)(cosf(previousRad) * (r - 2));
+  gfx->drawLine(cx + (int)(sinf(previousRad) * 4.0f),
+                cy - (int)(cosf(previousRad) * 4.0f),
+                previousEndX, previousEndY, COL_BLACK);
+  gfx->drawPixel(previousMidX, previousMidY, 0x0185);
 
-  // Restore 50% ring pixel at previous angle
-  int rMidX = cx + (int)(sinf(prevRad) * (r / 2));
-  int rMidY = cy - (int)(cosf(prevRad) * (r / 2));
-  gfx->drawPixel(rMidX, rMidY, 0x0185);
-
-  // Advance angle gently (3 degrees per tick)
   sweepAngle += 3.0f;
   if (sweepAngle >= 360.0f) sweepAngle -= 360.0f;
 
-  // 2. Draw new sweep line
-  float rad = sweepAngle * (float)M_PI / 180.0f;
-  int nx1 = cx + (int)(sinf(rad) * 4.0f);
-  int ny1 = cy - (int)(cosf(rad) * 4.0f);
-  int nx2 = cx + (int)(sinf(rad) * (r - 2));
-  int ny2 = cy - (int)(cosf(rad) * (r - 2));
-  gfx->drawLine(nx1, ny1, nx2, ny2, 0x02E5); // faint tactical green/cyan beam
-
-  // Restore center bullseye
-  gfx->drawCircle(cx, cy, 3, 0x07E0);
+  float currentRad = sweepAngle * (float)M_PI / 180.0f;
+  int currentEndX = cx + (int)(sinf(currentRad) * (r - 2));
+  int currentEndY = cy - (int)(cosf(currentRad) * (r - 2));
+  gfx->drawLine(cx + (int)(sinf(currentRad) * 4.0f),
+                cy - (int)(cosf(currentRad) * 4.0f),
+                currentEndX, currentEndY, 0x02E5);
+  gfx->drawCircle(cx, cy, 3, COL_GREEN);
   gfx->drawPixel(cx, cy, COL_WHITE);
-
-  // 3. Highlight any aircraft target that the beam just swept across
-  int count = OpenSkyClient::getCount();
-  float scale = (float)r / radiusKm;
-  for (int i = 0; i < count; i++) {
-    const FlightRecord *f = OpenSkyClient::getFlight(i);
-    if (!f || f->on_ground) continue;
-
-    float angleDiff = fabsf(f->bearing - sweepAngle);
-    if (angleDiff > 180.0f) angleDiff = 360.0f - angleDiff;
-
-    if (angleDiff <= 3.5f) {
-      float bngRad = f->bearing * (float)M_PI / 180.0f;
-      int sx = cx + (int)(sinf(bngRad) * f->dist_km * scale);
-      int sy = cy - (int)(cosf(bngRad) * f->dist_km * scale);
-      int dx = sx - cx;
-      int dy = sy - cy;
-      if ((dx * dx + dy * dy) <= (r - 2) * (r - 2)) {
-        gfx->fillCircle(sx, sy, 3, f->is_emergency ? 0xF800 : COL_WHITE);
-      }
-    }
-  }
 }

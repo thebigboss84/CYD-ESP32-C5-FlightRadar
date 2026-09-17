@@ -15,6 +15,7 @@ int   ConfigPortal::currentCityIdx     = -1;
 bool  ConfigPortal::configured         = false;
 
 char  ConfigPortal::customCityName[32] = "Rancho Cucamonga";
+char  ConfigPortal::customTimeZone[40] = "PST8PDT,M3.2.0,M11.1.0";
 float ConfigPortal::customLat          = 34.1233f;
 float ConfigPortal::customLon          = -117.5794f;
 bool  ConfigPortal::hasCustomCity      = true;
@@ -38,6 +39,7 @@ void ConfigPortal::loadSettings() {
   hasCustomCity = prefs.getBool("has_custom", false);
   usingCustom   = prefs.getBool("using_custom", true);
   String cc     = prefs.getString("custom_city", "");
+  String ctz    = prefs.getString("custom_tz", "PST8PDT,M3.2.0,M11.1.0");
   customLat     = prefs.getFloat ("custom_lat", 0.0f);
   customLon     = prefs.getFloat ("custom_lon", 0.0f);
   prefs.end();
@@ -46,11 +48,14 @@ void ConfigPortal::loadSettings() {
   p.trim();
   c.trim();
   cc.trim();
+  ctz.trim();
 
   strncpy(ssid, s.c_str(), sizeof(ssid) - 1);
   strncpy(pass, p.c_str(), sizeof(pass) - 1);
   strncpy(cityName, c.c_str(), sizeof(cityName) - 1);
   strncpy(customCityName, cc.c_str(), sizeof(customCityName) - 1);
+  strncpy(customTimeZone, ctz.c_str(), sizeof(customTimeZone) - 1);
+  customTimeZone[sizeof(customTimeZone) - 1] = '\0';
 
   // If custom city is not explicitly stored yet in custom_city:
   if (!hasCustomCity || strlen(customCityName) == 0) {
@@ -68,6 +73,7 @@ void ConfigPortal::loadSettings() {
       customLon = lon;
     } else {
       strncpy(customCityName, "Rancho Cucamonga", sizeof(customCityName) - 1);
+      strncpy(customTimeZone, "PST8PDT,M3.2.0,M11.1.0", sizeof(customTimeZone) - 1);
       customLat = 34.1233f;
       customLon = -117.5794f;
     }
@@ -80,6 +86,7 @@ void ConfigPortal::loadSettings() {
     prefs.putBool("has_custom", true);
     prefs.putBool("using_custom", true);
     prefs.putString("custom_city", customCityName);
+    prefs.putString("custom_tz", customTimeZone);
     prefs.putFloat("custom_lat", customLat);
     prefs.putFloat("custom_lon", customLon);
     prefs.putString("city", customCityName);
@@ -100,13 +107,15 @@ void ConfigPortal::loadSettings() {
                 ssid, cityName, lat, lon, usingCustom, customCityName, radiusKm);
 }
 
-void ConfigPortal::saveSettings(const char *s, const char *p, const char *c, float la, float lo, float rad, bool isCustom) {
+void ConfigPortal::saveSettings(const char *s, const char *p, const char *c, const char *tz, float la, float lo, float rad, bool isCustom) {
   String strCity = String(c);
   strCity.trim();
   String strSsid = String(s);
   strSsid.trim();
   String strPass = String(p);
   strPass.trim();
+  String strTimeZone = String(tz);
+  strTimeZone.trim();
 
   strncpy(ssid, strSsid.c_str(), sizeof(ssid) - 1);
   strncpy(pass, strPass.c_str(), sizeof(pass) - 1);
@@ -121,6 +130,8 @@ void ConfigPortal::saveSettings(const char *s, const char *p, const char *c, flo
     usingCustom   = true;
     currentCityIdx = -1;
     strncpy(customCityName, strCity.c_str(), sizeof(customCityName) - 1);
+    strncpy(customTimeZone, strTimeZone.c_str(), sizeof(customTimeZone) - 1);
+    customTimeZone[sizeof(customTimeZone) - 1] = '\0';
     customLat = la;
     customLon = lo;
   } else {
@@ -138,6 +149,7 @@ void ConfigPortal::saveSettings(const char *s, const char *p, const char *c, flo
   prefs.putBool  ("has_custom", hasCustomCity);
   prefs.putBool  ("using_custom", usingCustom);
   prefs.putString("custom_city", customCityName);
+  prefs.putString("custom_tz", customTimeZone);
   prefs.putFloat ("custom_lat", customLat);
   prefs.putFloat ("custom_lon", customLon);
   prefs.end();
@@ -213,8 +225,7 @@ int   ConfigPortal::getCityPresetIndex()      { return currentCityIdx; }
 
 const char *ConfigPortal::getTimeZone() {
   if (usingCustom || currentCityIdx < 0 || currentCityIdx >= (int)CITY_PRESETS_COUNT) {
-    // Pacific Time for Rancho Cucamonga (PST8PDT with daylight saving time)
-    return "PST8PDT,M3.2.0,M11.1.0";
+    return customTimeZone;
   }
   return CITY_PRESETS[currentCityIdx].tz;
 }
@@ -251,12 +262,12 @@ static void handlePortalRoot() {
     "<input type='password' name='pass' value='" + String(ConfigPortal::getPass()) + "'>"
     "<div class='card'>"
     "<label>Select City Preset (Optional):</label>"
-    "<select name='city_preset' onchange=\"if(this.value!='custom'){var p=this.value.split(',');document.getElementById('cname').value=p[0];document.getElementById('clat').value=p[1];document.getElementById('clon').value=p[2];}\">"
+    "<select name='city_preset' onchange=\"if(this.value!='custom'){var p=this.value.split('|');document.getElementById('cname').value=p[0];document.getElementById('clat').value=p[1];document.getElementById('clon').value=p[2];document.getElementById('tz').value=p[3];}\">"
     "<option value='custom'>-- Custom Home City --</option>";
 
   for (size_t i = 0; i < CITY_PRESETS_COUNT; i++) {
     const CityPreset &cp = CITY_PRESETS[i];
-    String optVal = String(cp.name) + "," + String(cp.lat, 4) + "," + String(cp.lon, 4);
+    String optVal = String(cp.name) + "|" + String(cp.lat, 4) + "|" + String(cp.lon, 4) + "|" + String(cp.tz);
     html += "<option value='" + optVal + "'>" + String(cp.name) + "</option>";
   }
 
@@ -268,6 +279,17 @@ static void handlePortalRoot() {
     "<input type='text' id='clat' name='lat' value='" + String(defLat, 4) + "' required>"
     "<label>Longitude:</label>"
     "<input type='text' id='clon' name='lon' value='" + String(defLon, 4) + "' required>"
+    "<label>Timezone (POSIX TZ):</label>"
+    "<select id='tz' name='tz'>"
+    "<option value='PST8PDT,M3.2.0,M11.1.0'>Pacific (US)</option>"
+    "<option value='MST7MDT,M3.2.0,M11.1.0'>Mountain (US)</option>"
+    "<option value='CST6CDT,M3.2.0,M11.1.0'>Central (US)</option>"
+    "<option value='EST5EDT,M3.2.0,M11.1.0'>Eastern (US)</option>"
+    "<option value='GMT0BST,M3.5.0/1,M10.5.0'>United Kingdom</option>"
+    "<option value='CET-1CEST,M3.5.0,M10.5.0/3'>Central Europe</option>"
+    "<option value='JST-9'>Japan</option>"
+    "<option value='GST-4'>Gulf Standard Time</option>"
+    "</select>"
     "</div>"
     "<label>Radar Scan Radius (km):</label>"
     "<select name='radius'>"
@@ -286,6 +308,7 @@ static void handlePortalSave() {
   String s   = webServer->arg("ssid");
   String p   = webServer->arg("pass");
   String c   = webServer->arg("city");
+  String tz  = webServer->arg("tz");
   float  lat = webServer->arg("lat").toFloat();
   float  lon = webServer->arg("lon").toFloat();
   float  rad = webServer->arg("radius").toFloat();
@@ -300,7 +323,7 @@ static void handlePortalSave() {
     }
   }
 
-  ConfigPortal::saveSettings(s.c_str(), p.c_str(), c.c_str(), lat, lon, rad, isCustom);
+  ConfigPortal::saveSettings(s.c_str(), p.c_str(), c.c_str(), tz.c_str(), lat, lon, rad, isCustom);
 
   webServer->send(200, "text/html",
     "<html><body style='background:#000d1a;color:#00ffff;font-family:sans-serif;text-align:center;padding:40px;'>"

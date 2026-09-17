@@ -15,6 +15,7 @@
 #include "WeatherView.h"
 #include "IssView.h"
 #include "SpaceXView.h"
+#include "LaunchAlertView.h"
 #include "LedBeacon.h"
 #include "SpeakerAlert.h"
 #include "CitySelectView.h"
@@ -32,8 +33,14 @@ static unsigned long lastClockTick        = 0;
 static unsigned long lastSweepTick        = 0;
 static unsigned long lastCountdownTick    = 0;
 static unsigned long lastExtrapolateTick  = 0;
+static unsigned long lastWifiRetry        = 0;
+static bool wifiWasConnected              = false;
+
+static const unsigned long WIFI_RETRY_MS = 30000UL;
 
 static char timeString[24] = "12:00:00 AM";
+static bool launchNoticeVisible = false;
+static int64_t dismissedLaunchEpoch = 0;
 
 static float getActiveLat() {
   if (CitySelectView::isUsingGps() && GpsManager::hasFix()) {
@@ -204,6 +211,7 @@ void setup() {
     DisplayEngine::showStatus("Wi-Fi Connected! Syncing time...", COL_GREEN);
     configTzTime(ConfigPortal::getTimeZone(), "pool.ntp.org", "time.nist.gov");
     delay(1000);
+    wifiWasConnected = true;
   } else {
     Serial.println("[WiFi] Connection failed! Starting Web Setup Portal...");
     DisplayEngine::showStatus("Wi-Fi failed. Opening portal...", COL_RED);
@@ -242,8 +250,15 @@ void loop() {
   // 3. Touch Handling
   int tx, ty;
   if (DisplayEngine::readTouch(tx, ty)) {
+    if (launchNoticeVisible) {
+      if (LaunchAlertView::isCloseTouched(tx, ty)) {
+        dismissedLaunchEpoch = SpaceXClient::getData().launch_epoch_utc;
+        launchNoticeVisible = false;
+        redrawCurrentView();
+      }
+    }
     // Top Bar Touches (Y: 0..HEADER_H)
-    if (ty < HEADER_H) {
+    else if (ty < HEADER_H) {
       // Setup button [SET] touched (x: 260..320)
       if (tx >= 260) {
         Serial.println("[Touch] SETUP button pressed. Launching Config Portal...");
@@ -288,7 +303,26 @@ void loop() {
   }
 
   // 4. Periodic API Data Fetching
-  if (WiFi.isConnected()) {
+  bool wifiConnected = WiFi.status() == WL_CONNECTED;
+  if (!wifiConnected) {
+    if (wifiWasConnected) {
+      wifiWasConnected = false;
+      Serial.println("[WiFi] Connection lost. Retrying in the background.");
+    }
+    if (now - lastWifiRetry >= WIFI_RETRY_MS) {
+      lastWifiRetry = now;
+      Serial.println("[WiFi] Attempting reconnect...");
+      WiFi.disconnect();
+      WiFi.begin(ConfigPortal::getSsid(), ConfigPortal::getPass());
+    }
+  } else if (!wifiWasConnected) {
+    wifiWasConnected = true;
+    Serial.println("[WiFi] Reconnected. Refreshing telemetry...");
+    configTzTime(ConfigPortal::getTimeZone(), "pool.ntp.org", "time.nist.gov");
+    fetchCityData();
+  }
+
+  if (wifiConnected) {
     if (now - lastOpenSkyFetch >= OPENSKY_REFRESH_MS) {
       lastOpenSkyFetch = now;
       OpenSkyClient::fetch(getActiveLat(), getActiveLon(), ConfigPortal::getRadius());
@@ -366,12 +400,25 @@ void loop() {
 
   const SpaceXRecord &sp = SpaceXClient::getData();
   int64_t diff = 0;
-  if (sp.valid && sp.visible_in_sky && sp.launch_epoch_utc > 0) {
+  if (sp.valid && sp.launch_epoch_utc > 0) {
     time_t nowUtc = time(nullptr);
     diff = sp.launch_epoch_utc - (int64_t)nowUtc;
-    LedBeacon::setSpaceXState(diff > 0 && diff <= 900, diff <= 0 && diff >= -600);
+    LedBeacon::setSpaceXState(sp.visible_in_sky && diff > 0 && diff <= 900,
+                              sp.visible_in_sky && diff <= 0 && diff >= -600);
   } else {
     LedBeacon::setSpaceXState(false, false);
+  }
+
+  bool launchNoticeDue = sp.valid && sp.launch_epoch_utc > 0 &&
+                         diff > 0 && diff <= SPACEX_NOTICE_WINDOW_SEC;
+  bool launchNoticeWasVisible = launchNoticeVisible;
+  if (launchNoticeDue && sp.launch_epoch_utc != dismissedLaunchEpoch) {
+    launchNoticeVisible = true;
+  }
+  if (launchNoticeVisible && (!sp.valid || diff <= 0 ||
+      sp.launch_epoch_utc == dismissedLaunchEpoch)) {
+    launchNoticeVisible = false;
+    redrawCurrentView();
   }
 
   const IssRecord &iss = IssClient::getData();
@@ -381,6 +428,12 @@ void loop() {
                        sp.valid && diff > 0 && diff <= SPACEX_NOTICE_WINDOW_SEC,
                        sp.valid && diff <= 0 && diff >= -600,
                        sp.launch_epoch_utc);
+
+  if (launchNoticeVisible && (!launchNoticeWasVisible ||
+      now - lastCountdownTick >= CLOCK_REFRESH_MS)) {
+    lastCountdownTick = now;
+    LaunchAlertView::draw(sp, diff);
+  }
 
   LedBeacon::update();
 

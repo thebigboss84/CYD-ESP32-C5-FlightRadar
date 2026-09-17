@@ -6,7 +6,7 @@
 class ConfigPortal {
 public:
   static void loadSettings();
-  static void saveSettings(const char *ssid, const char *pass, const char *city, float lat, float lon, float radius, bool isCustom = true);
+  static void saveSettings(const char *ssid, const char *pass, const char *city, const char *tz, float lat, float lon, float radius, bool isCustom = true);
   static void nextCityPreset();
   static void setCityPreset(int index);
   static void setCustomCity();
@@ -37,6 +37,7 @@ private:
   static bool  configured;
 
   static char  customCityName[32];
+  static char  customTimeZone[40];
   static float customLat;
   static float customLon;
   static bool  hasCustomCity;

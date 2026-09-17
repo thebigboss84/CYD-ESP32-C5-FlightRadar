@@ -147,6 +147,7 @@ Multi-state priority-driven hardware indicator using the onboard WS2812 RGB LED:
 * Connect a passive piezo speaker or buzzer signal lead to **GPIO 26** (change `SPEAKER_PIN` in `include/AppConfig.h` if yours is wired differently), with its ground connected to GND.
 * A new nearby M4.0+ quake plays one urgent three-pair tone pattern once per USGS event.
 * The next SpaceX launch plays a brief notice when it enters the final 15 minutes, plus a distinct liftoff fanfare at T-0. Alerts run without pausing radar updates.
+* At T-15 minutes, a full launch notice screen shows the live countdown, mission, vehicle, and launch site. Tap **CLOSE** to dismiss it, or it closes automatically at liftoff.
 * **Dedicated Seismology View (`QUAKE` tab)**:
   * **Richter Magnitude Badge**: Dynamic severity color coding (Green for $M < 2.5$, Amber for $2.5 \le M < 4.0$, Red for $M \ge 4.0$).
   * **Epicenter Telemetry**: Precise geographic place name, distance in km, compass bearing, focal depth, elapsed age in minutes, and P-wave / S-wave propagation status.

@@ -3,6 +3,15 @@
 #include "SpaceXClient.h"
 #include <time.h>
 
+static void formatLocalLaunchTime(int64_t launchEpochUtc, char *buffer, size_t bufferSize) {
+  time_t launchTime = (time_t)launchEpochUtc;
+  struct tm localLaunchTime;
+  if (localtime_r(&launchTime, &localLaunchTime) == nullptr ||
+      strftime(buffer, bufferSize, "%Y-%m-%d %H:%M", &localLaunchTime) == 0) {
+    snprintf(buffer, bufferSize, "UNKNOWN");
+  }
+}
+
 static const char *getCompassStr(float deg) {
   const char *dirs[] = { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
                          "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" };
@@ -107,7 +116,9 @@ void SpaceXView::draw() {
   } else if (diffSec > -3600LL) {
     snprintf(cdBuf, sizeof(cdBuf), "LIFTOFF / IN FLIGHT");
   } else {
-    snprintf(cdBuf, sizeof(cdBuf), "TARGET: %.16s", sp.net_iso);
+    char localLaunchTime[20];
+    formatLocalLaunchTime(sp.launch_epoch_utc, localLaunchTime, sizeof(localLaunchTime));
+    snprintf(cdBuf, sizeof(cdBuf), "TARGET: %s", localLaunchTime);
   }
 
   gfx->setTextSize(2);
@@ -127,7 +138,9 @@ void SpaceXView::draw() {
   gfx->setCursor(8, CONTENT_Y + 135);
   gfx->print("TARGET:  ");
   gfx->setTextColor(COL_CYAN);
-  gfx->print(sp.net_iso);
+  char localLaunchTime[20];
+  formatLocalLaunchTime(sp.launch_epoch_utc, localLaunchTime, sizeof(localLaunchTime));
+  gfx->print(localLaunchTime);
 
   gfx->setTextColor(COL_GRAY);
   gfx->setCursor(8, CONTENT_Y + 150);
