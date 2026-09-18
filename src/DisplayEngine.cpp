@@ -205,11 +205,15 @@ void DisplayEngine::drawWeatherIcon(int x, int y, int code, uint16_t color) {
       gfx->drawLine(x1, y1, x2, y2, COL_YELLOW);
     }
   }
-  else if (code >= 1 && code <= 3) {
+  else if ((code >= 1 && code <= 3) || code == 45 || code == 48) {
     gfx->fillCircle(x + 12, y + 18, 6, COL_GRAY);
     gfx->fillCircle(x + 20, y + 16, 8, COL_WHITE);
     gfx->fillCircle(x + 26, y + 19, 5, COL_GRAY);
     gfx->fillRect(x + 10, y + 20, 18, 6, COL_WHITE);
+    if (code == 45 || code == 48) {
+      gfx->drawFastHLine(x + 9, y + 29, 6, COL_GRAY);
+      gfx->drawFastHLine(x + 19, y + 29, 8, COL_GRAY);
+    }
   }
   else if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
     gfx->fillCircle(x + 12, y + 14, 6, COL_GRAY);
@@ -226,7 +230,7 @@ void DisplayEngine::drawWeatherIcon(int x, int y, int code, uint16_t color) {
     gfx->drawChar(x + 11, y + 23, '*', COL_WHITE, COL_BLACK);
     gfx->drawChar(x + 21, y + 23, '*', COL_WHITE, COL_BLACK);
   }
-  else {
+  else if (code >= 95 && code <= 99) {
     gfx->fillCircle(x + 12, y + 14, 6, COL_GRAY);
     gfx->fillCircle(x + 20, y + 12, 8, COL_WHITE);
     gfx->fillRect(x + 10, y + 16, 18, 6, COL_WHITE);

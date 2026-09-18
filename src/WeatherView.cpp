@@ -62,7 +62,11 @@ void WeatherView::draw(const char *cityName) {
     gfx->setTextColor(COL_CYAN);
     gfx->setTextSize(1);
     gfx->setCursor(cx + 12, startY + 6);
-    gfx->printf("DAY %s", wx.daily_day[i]);
+    if (i == 0) {
+      gfx->print("TODAY");
+    } else {
+      gfx->printf("DAY %s", wx.daily_day[i]);
+    }
 
     DisplayEngine::drawWeatherIcon(cx + 18, startY + 20, wx.daily_code[i], COL_YELLOW);
 
